@@ -186,6 +186,8 @@ private slots:
     void onNewMapCreated();
     void onMapCacheCleared();
     void importMapFromAdvanceMap1_92();
+    void importMapFromJson();
+    void exportMapAsJson();
     void onMapRulerStatusChanged(const QString &);
     void applyUserShortcuts();
 
@@ -242,6 +244,8 @@ private slots:
     void on_actionExport_Stitched_Map_Image_triggered();
     void on_actionExport_Map_Timelapse_Image_triggered();
     void on_actionImport_Map_from_Advance_Map_1_92_triggered();
+    void on_actionImport_Map_from_Json_triggered();
+    void on_actionExport_Map_as_Json_triggered();
 
     void on_comboBox_ConnectionDirection_currentTextChanged(const QString &arg1);
     void on_spinBox_ConnectionOffset_valueChanged(int offset);

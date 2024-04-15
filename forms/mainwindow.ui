@@ -3102,6 +3102,8 @@
     <addaction name="actionRegion_Map_Editor"/>
     <addaction name="separator"/>
     <addaction name="actionImport_Map_from_Advance_Map_1_92"/>
+    <addaction name="actionImport_Map_from_Json"/>
+    <addaction name="actionExport_Map_as_Json"/>
     <addaction name="separator"/>
     <addaction name="actionOpen_Project_in_Text_Editor"/>
    </widget>
@@ -3395,6 +3397,16 @@
   <action name="actionImport_Map_from_Advance_Map_1_92">
    <property name="text">
     <string>Import Map from Advance Map 1.92...</string>
+   </property>
+  </action>
+  <action name="actionImport_Map_from_Json">
+   <property name="text">
+    <string>Import Map from Json...</string>
+   </property>
+  </action>
+    <action name="actionExport_Map_as_Json">
+   <property name="text">
+    <string>Export Map as Json...</string>
    </property>
   </action>
   <action name="actionProject_Settings">

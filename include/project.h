@@ -191,6 +191,8 @@ public:
     bool readFieldmapProperties();
     bool readFieldmapMasks();
     QMap<QString, QMap<QString, QString>> readObjEventGfxInfo();
+    bool importMapFromJson();
+    bool exportMapAsJson();
 
     void setEventPixmap(Event *event, bool forceLoad = false);
 

@@ -531,6 +531,11 @@ bool MainWindow::openProject(const QString &dir, bool initial) {
         if (!initial) setWindowDisabled(true);
         return false;
     }
+      #ifdef QT_DEBUG
+         qDebug() << "Running a debug build";
+      #else
+         qDebug() << "Running a release build";
+      #endif
 
     const QString projectString = QString("%1project '%2'").arg(initial ? "recent " : "").arg(QDir::toNativeSeparators(dir));
 
@@ -2530,6 +2535,22 @@ void MainWindow::importMapFromAdvanceMap1_92()
 
     openNewMapPopupWindow();
     this->newMapPrompt->init(mapLayout);
+}
+
+void MainWindow::on_actionImport_Map_from_Json_triggered() {
+   importMapFromJson();
+}
+
+void MainWindow::on_actionExport_Map_as_Json_triggered() {
+   exportMapAsJson();
+}
+
+void MainWindow::importMapFromJson() {
+   editor->project->importMapFromJson();
+}
+
+void MainWindow::exportMapAsJson() {
+   editor->project->exportMapAsJson();
 }
 
 void MainWindow::showExportMapImageWindow(ImageExporterMode mode) {

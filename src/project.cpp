@@ -2054,6 +2054,204 @@ bool Project::readFieldmapMasks() {
     return true;
 }
 
+bool Project::importMapFromJson() {
+    for (auto mapLayout : mapLayouts) {
+        QString path = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
+        path.erase(path.end()-3, path.end());
+        path+= "json";
+
+        fileWatcher.addPath(path);
+        QJsonDocument blockDataDoc;
+        if (!parser.tryParseJsonFile(&blockDataDoc, path)) {
+            logError(QString("Failed to read map layouts from %1").arg(path));
+            return false;
+        }
+
+
+        QJsonObject mapObj = blockDataDoc.object();
+        QJsonArray blockDataArr = mapObj["map"].toArray();
+        if (blockDataArr.size() == 0) {
+            logError(QString("'map' array is missing from %1.").arg(path));
+            return false;
+        }
+
+        QList<QString> requiredFields = QList<QString>{
+            "metatileId",
+            "collision",
+            "elevation",
+        };
+
+        mapLayout->blockdata.clear();
+        for (int i = 0; i < blockDataArr.size(); i++) {
+            QJsonObject blockDataObj = blockDataArr[i].toObject();
+            if (blockDataObj.isEmpty())
+                continue;
+            if (!parser.ensureFieldsExist(blockDataObj, requiredFields)) {
+                logError(QString("Map %1 is missing field(s) in %2.").arg(i).arg(path));
+                return false;
+            }
+
+            Block block{};
+            bool succeeded{true};
+            block.setMetatileId(ParseUtil::jsonToInt(blockDataObj["metatileId"], &succeeded));
+            if (!succeeded) {
+                // TODO(traeighsea): Update to check size of read in value
+                logError(QString("Missing 'metatileId' value on layout %1 in %2").arg(i).arg(path));
+                return false;
+            }
+            block.setCollision(ParseUtil::jsonToInt(blockDataObj["collision"], &succeeded));
+            if (!succeeded) {
+                // TODO(traeighsea): Update to check size of read in value
+                logError(QString("Missing 'collision' value on layout %1 in %2").arg(i).arg(path));
+                return false;
+            }
+            block.setElevation(ParseUtil::jsonToInt(blockDataObj["elevation"], &succeeded));
+            if (!succeeded) {
+                // TODO(traeighsea): Update to check size of read in value
+                logError(QString("Missing 'elevation' value on layout %1 in %2").arg(i).arg(path));
+                return false;
+            }
+
+            mapLayout->blockdata.append(std::move(block));
+        }
+
+        QString binPath = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
+        writeBlockdata(binPath, mapLayout->blockdata);
+    }
+
+    for (auto mapLayout : mapLayouts) {
+        QString path = QString("%1/%2").arg(root).arg(mapLayout->border_path);
+        path.erase(path.end()-3, path.end());
+        path+= "json";
+
+        fileWatcher.addPath(path);
+        QJsonDocument blockDataDoc;
+        if (!parser.tryParseJsonFile(&blockDataDoc, path)) {
+            logError(QString("Failed to read map layouts from %1").arg(path));
+            return false;
+        }
+
+
+        QJsonObject mapObj = blockDataDoc.object();
+        QJsonArray blockDataArr = mapObj["border"].toArray();
+        if (blockDataArr.size() == 0) {
+            logError(QString("'border' array is missing from %1.").arg(path));
+            return false;
+        }
+
+        QList<QString> requiredFields = QList<QString>{
+            "metatileId",
+            "collision",
+            "elevation",
+        };
+
+        mapLayout->border.clear();
+        for (int i = 0; i < blockDataArr.size(); i++) {
+            QJsonObject blockDataObj = blockDataArr[i].toObject();
+            if (blockDataObj.isEmpty())
+                continue;
+            if (!parser.ensureFieldsExist(blockDataObj, requiredFields)) {
+                logError(QString("Map %1 is missing field(s) in %2.").arg(i).arg(path));
+                return false;
+            }
+
+            Block block{};
+            bool succeeded{true};
+            block.setMetatileId(ParseUtil::jsonToInt(blockDataObj["metatileId"], &succeeded));
+            if (!succeeded) {
+                // TODO(traeighsea): Update to check size of read in value
+                logError(QString("Missing 'metatileId' value on layout %1 in %2").arg(i).arg(path));
+                return false;
+            }
+            block.setCollision(ParseUtil::jsonToInt(blockDataObj["collision"], &succeeded));
+            if (!succeeded) {
+                // TODO(traeighsea): Update to check size of read in value
+                logError(QString("Missing 'collision' value on layout %1 in %2").arg(i).arg(path));
+                return false;
+            }
+            block.setElevation(ParseUtil::jsonToInt(blockDataObj["elevation"], &succeeded));
+            if (!succeeded) {
+                // TODO(traeighsea): Update to check size of read in value
+                logError(QString("Missing 'elevation' value on layout %1 in %2").arg(i).arg(path));
+                return false;
+            }
+
+            mapLayout->border.append(std::move(block));
+        }
+
+        QString binPath = QString("%1/%2").arg(root).arg(mapLayout->border_path);
+        writeBlockdata(binPath, mapLayout->border);
+    }
+
+    return true;
+}
+
+bool Project::exportMapAsJson() {
+   for (auto mapLayout : mapLayoutsMaster) {
+      { // Export map block data
+         QString path = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
+         path.erase(path.end()-3, path.end());
+         path+= "json";
+         QFile blockDataFile(path);
+
+         if (!blockDataFile.open(QIODevice::WriteOnly)) {
+            logError(QString("Error: Could not open %1 for writing").arg(path));
+            return false;
+         }
+         loadBlockdata(mapLayout);
+
+         OrderedJson::object mapObj;
+
+         OrderedJson::array blocksArr;
+         for (auto block : mapLayout->blockdata) {
+            OrderedJson::object blockObj;
+            blockObj["metatileId"] = block.metatileId();
+            blockObj["collision"] = block.collision();
+            blockObj["elevation"] = block.elevation();
+            blocksArr.push_back(blockObj);
+         }
+         mapObj["map"] = blocksArr;
+
+         OrderedJson blockDataJson(mapObj);
+         OrderedJsonDoc jsonDoc(&blockDataJson);
+         jsonDoc.dump(&blockDataFile);
+         blockDataFile.close();
+      }
+
+      { // Export border data
+         QString path = QString("%1/%2").arg(root).arg(mapLayout->border_path);
+         path.erase(path.end()-3, path.end());
+         path+= "json";
+         QFile blockDataFile(path);
+
+         if (!blockDataFile.open(QIODevice::WriteOnly)) {
+            logError(QString("Error: Could not open %1 for writing").arg(path));
+            return false;
+         }
+         loadLayoutBorder(mapLayout);
+
+         OrderedJson::object mapObj;
+
+         OrderedJson::array blocksArr;
+         for (auto block : mapLayout->border) {
+            OrderedJson::object blockObj;
+            blockObj["collision"] = block.collision();
+            blockObj["elevation"] = block.elevation();
+            blockObj["metatileId"] = block.metatileId();
+            blocksArr.push_back(blockObj);
+         }
+         mapObj["border"] = blocksArr;
+
+         OrderedJson blockDataJson(mapObj);
+         OrderedJsonDoc jsonDoc(&blockDataJson);
+         jsonDoc.dump(&blockDataFile);
+         blockDataFile.close();
+      }
+   }
+
+   return true;
+}
+
 bool Project::readRegionMapSections() {
     this->mapSectionNameToValue.clear();
     this->mapSectionValueToName.clear();
