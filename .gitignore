@@ -18,3 +18,5 @@ qrc_*.cpp
 # Project files
 compile_commands.json
 .vscode
+.cache
+build
