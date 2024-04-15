@@ -382,6 +382,8 @@ public:
     bool getFloorNumberEnabled();
     void setCreateMapTextFileEnabled(bool enable);
     bool getCreateMapTextFileEnabled();
+    void setCreateJsonFilesForMapDataEnabled(bool enable);
+    bool getCreateJsonFilesForMapDataEnabled();
     void setTripleLayerMetatilesEnabled(bool enable);
     bool getTripleLayerMetatilesEnabled();
     int getNumLayersInMetatile();
@@ -469,6 +471,7 @@ private:
     bool enableEventCloneObject;
     bool enableFloorNumber;
     bool createMapTextFile;
+    bool createJsonFilesForMapData;
     bool enableTripleLayerMetatiles;
     uint16_t defaultMetatileId;
     uint16_t defaultElevation;

@@ -915,6 +915,8 @@ void ProjectConfig::parseConfigKeyValue(QString key, QString value) {
         this->enableFloorNumber = getConfigBool(key, value);
     } else if (key == "create_map_text_file") {
         this->createMapTextFile = getConfigBool(key, value);
+    } else if (key == "create_json_files_for_map_data") {
+        this->createJsonFilesForMapData = getConfigBool(key, value);
     } else if (key == "enable_triple_layer_metatiles") {
         this->enableTripleLayerMetatiles = getConfigBool(key, value);
     } else if (key == "default_metatile") {
@@ -1036,6 +1038,7 @@ void ProjectConfig::setUnreadKeys() {
     if (!readKeys.contains("enable_event_clone_object")) this->enableEventCloneObject = isPokefirered;
     if (!readKeys.contains("enable_floor_number")) this->enableFloorNumber = isPokefirered;
     if (!readKeys.contains("create_map_text_file")) this->createMapTextFile = (this->baseGameVersion != BaseGameVersion::pokeemerald);
+    if (!readKeys.contains("create_json_files_for_map_data")) this->createJsonFilesForMapData = false;
     if (!readKeys.contains("new_map_border_metatiles")) this->newMapBorderMetatileIds = isPokefirered ? DEFAULT_BORDER_FRLG : DEFAULT_BORDER_RSE;
     if (!readKeys.contains("default_secondary_tileset")) this->defaultSecondaryTileset = isPokefirered ? "gTileset_PalletTown" : "gTileset_Petalburg";
     if (!readKeys.contains("metatile_attributes_size")) this->metatileAttributesSize = Metatile::getDefaultAttributesSize(this->baseGameVersion);
@@ -1060,6 +1063,7 @@ QMap<QString, QString> ProjectConfig::getKeyValueMap() {
     map.insert("enable_event_clone_object", QString::number(this->enableEventCloneObject));
     map.insert("enable_floor_number", QString::number(this->enableFloorNumber));
     map.insert("create_map_text_file", QString::number(this->createMapTextFile));
+    map.insert("create_json_files_for_map_data", QString::number(this->createJsonFilesForMapData));
     map.insert("enable_triple_layer_metatiles", QString::number(this->enableTripleLayerMetatiles));
     map.insert("default_metatile", Metatile::getMetatileIdString(this->defaultMetatileId));
     map.insert("default_elevation", QString::number(this->defaultElevation));
@@ -1316,6 +1320,15 @@ void ProjectConfig::setCreateMapTextFileEnabled(bool enable) {
 
 bool ProjectConfig::getCreateMapTextFileEnabled() {
     return this->createMapTextFile;
+}
+
+void ProjectConfig::setCreateJsonFilesForMapDataEnabled(bool enable) {
+    this->createJsonFilesForMapData = enable;
+    this->save();
+}
+
+bool ProjectConfig::getCreateJsonFilesForMapDataEnabled() {
+    return this->createJsonFilesForMapData;
 }
 
 void ProjectConfig::setTripleLayerMetatilesEnabled(bool enable) {

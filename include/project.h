@@ -112,6 +112,10 @@ public:
     bool loadBlockdata(MapLayout*);
     bool loadLayoutBorder(MapLayout*);
 
+    Blockdata readBlockdataFromJson(QString);
+    bool loadBlockdataFromJson(MapLayout*);
+    bool loadLayoutBorderFromJson(MapLayout*);
+
     void saveTextFile(QString path, QString text);
     void appendTextFile(QString path, QString text);
     void deleteFile(QString path);
@@ -150,6 +154,9 @@ public:
     void saveLayoutBlockdata(Map*);
     void saveLayoutBorder(Map*);
     void writeBlockdata(QString, const Blockdata &);
+    void saveLayoutBlockdataAsJson(Map*);
+    void saveLayoutBorderAsJson(Map*);
+    void writeBlockdataAsJson(QString, const Blockdata &);
     void saveAllMaps();
     void saveMap(Map*);
     void saveAllDataStructures();
@@ -191,8 +198,8 @@ public:
     bool readFieldmapProperties();
     bool readFieldmapMasks();
     QMap<QString, QMap<QString, QString>> readObjEventGfxInfo();
-    bool importMapFromJson();
-    bool exportMapAsJson();
+    bool importMapDataFromJson();
+    bool exportMapDataAsJson();
 
     void setEventPixmap(Event *event, bool forceLoad = false);
 
