@@ -14,3 +14,7 @@ ui_*.h
 moc_*.h
 moc_*.cpp
 qrc_*.cpp
+
+# Project files
+compile_commands.json
+.vscode
