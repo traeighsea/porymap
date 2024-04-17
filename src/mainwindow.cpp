@@ -2545,12 +2545,44 @@ void MainWindow::on_actionExport_Map_Data_as_Json_triggered() {
    exportMapDataAsJson();
 }
 
+void MainWindow::on_actionExport_Map_Data_as_Bin_triggered() {
+   exportMapDataAsBin();
+}
+
+void MainWindow::on_actionImport_Metatile_Data_from_Json_triggered() {
+   importMetatileDataFromJson();
+}
+
+void MainWindow::on_actionExport_Metatile_Data_as_Json_triggered() {
+   exportMetatileDataAsJson();
+}
+
+void MainWindow::on_actionExport_Metatile_Data_as_Bin_triggered() {
+   exportMetatileDataAsBin();
+}
+
 void MainWindow::importMapDataFromJson() {
    editor->project->importMapDataFromJson();
 }
 
 void MainWindow::exportMapDataAsJson() {
    editor->project->exportMapDataAsJson();
+}
+
+void MainWindow::exportMapDataAsBin() {
+   editor->project->exportMapDataAsBin();
+}
+
+void MainWindow::importMetatileDataFromJson() {
+   editor->project->exportMetatileDataAsJson();
+}
+
+void MainWindow::exportMetatileDataAsJson() {
+   editor->project->exportMetatileDataAsJson();
+}
+
+void MainWindow::exportMetatileDataAsBin() {
+   editor->project->exportMetatileDataAsBin();
 }
 
 void MainWindow::showExportMapImageWindow(ImageExporterMode mode) {

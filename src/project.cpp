@@ -2255,6 +2255,36 @@ bool Project::exportMapDataAsJson() {
     return true;
 }
 
+bool Project::exportMapDataAsBin() {
+    for (auto mapLayout : mapLayouts) {
+        // Export map block data
+        QString blockdataPath = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
+        writeBlockdata(blockdataPath, mapLayout->blockdata);
+
+        // Export border data
+        QString borderPath = QString("%1/%2").arg(root).arg(mapLayout->border_path);
+        writeBlockdata(borderPath, mapLayout->border);
+    }
+
+    return true;
+}
+
+bool Project::importMetatileDataFromJson() {
+
+    return true;
+}
+
+bool Project::exportMetatileDataAsJson() {
+
+    return true;
+}
+
+bool Project::exportMetatileDataAsBin() {
+
+    return true;
+}
+
+
 bool Project::readRegionMapSections() {
     this->mapSectionNameToValue.clear();
     this->mapSectionValueToName.clear();
