@@ -107,6 +107,10 @@ private slots:
     void on_actionExport_Primary_Metatiles_Image_triggered();
     void on_actionExport_Secondary_Metatiles_Image_triggered();
 
+    void on_actionImport_Metatile_Data_from_Json_triggered();
+    void on_actionExport_Metatile_Data_as_Json_triggered();
+    void on_actionExport_Metatile_Data_as_Bin_triggered();
+
     void on_actionImport_Primary_Metatiles_triggered();
     void on_actionImport_Secondary_Metatiles_triggered();
 
@@ -137,6 +141,9 @@ private:
     void redrawMetatileSelector();
     void importTilesetTiles(Tileset*, bool);
     void importTilesetMetatiles(Tileset*, bool);
+    void importMetatileDataFromJson();
+    void exportMetatileDataAsJson();
+    void exportMetatileDataAsBin();
     void refresh();
     void commitMetatileLabel();
     void closeEvent(QCloseEvent*);

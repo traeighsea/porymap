@@ -48,6 +48,7 @@ public:
         LayerType,
         Unused, // Preserve bits not used by the other attributes
     };
+    static const char* AttrEnumToString(const Attr& attribute);
 
 public:
     QList<Tile> tiles;
@@ -76,6 +77,9 @@ public:
     static void setLayout(Project*);
     static QString getMetatileIdString(uint16_t metatileId);
     static QString getMetatileIdStrings(const QList<uint16_t> metatileIds);
+
+    // Used primarily to iterate through the attributes map
+    const QMap<Metatile::Attr, uint32_t>& getAttributesMap() const;
 
     inline bool operator==(const Metatile &other) {
         return this->tiles == other.tiles && this->attributes == other.attributes;

@@ -147,6 +147,7 @@ public:
     void loadTilesetAssets(Tileset*);
     void loadTilesetTiles(Tileset*, QImage);
     void loadTilesetMetatiles(Tileset*);
+    void loadTilesetMetatilesFromJson(Tileset*);
     void loadTilesetMetatileLabels(Tileset*);
     void loadTilesetPalettes(Tileset*);
     void readTilesetPaths(Tileset* tileset);
@@ -169,6 +170,8 @@ public:
     void saveTilesetMetatileLabels(Tileset*, Tileset*);
     void saveTilesetMetatileAttributes(Tileset*);
     void saveTilesetMetatiles(Tileset*);
+    void saveTilesetMetatileAttributesAsJson(Tileset*);
+    void saveTilesetMetatilesAsJson(Tileset*);
     void saveTilesetTilesImage(Tileset*);
     void saveTilesetPalettes(Tileset*);
     void appendTilesetLabel(QString label, QString isSecondaryStr);
@@ -242,6 +245,11 @@ public:
 
 private:
     void updateMapLayout(Map*);
+
+    // Expects an empty list of metatiles additionally populates the list (Should be called before readMetatileAttrsFromJson)
+    void readMetatilesFromJson(QString path, QList<Metatile*>& metatiles);
+    // Expects an already populated list of metatiles (Should be called after readMetatilesFromJson)
+    void readMetatileAttrsFromJson(QString path, QList<Metatile*>& metatiles);
 
     void setNewMapBlockdata(Map* map);
     void setNewMapBorder(Map *map);

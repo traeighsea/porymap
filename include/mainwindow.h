@@ -189,9 +189,6 @@ private slots:
     void importMapDataFromJson();
     void exportMapDataAsJson();
     void exportMapDataAsBin();
-    void importMetatileDataFromJson();
-    void exportMetatileDataAsJson();
-    void exportMetatileDataAsBin();
     void onMapRulerStatusChanged(const QString &);
     void applyUserShortcuts();
 
@@ -251,10 +248,6 @@ private slots:
     void on_actionImport_Map_Data_from_Json_triggered();
     void on_actionExport_Map_Data_as_Json_triggered();
     void on_actionExport_Map_Data_as_Bin_triggered();
-    void on_actionImport_Metatile_Data_from_Json_triggered();
-    void on_actionExport_Metatile_Data_as_Json_triggered();
-    void on_actionExport_Metatile_Data_as_Bin_triggered();
-
 
     void on_comboBox_ConnectionDirection_currentTextChanged(const QString &arg1);
     void on_spinBox_ConnectionOffset_valueChanged(int offset);

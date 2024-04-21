@@ -3105,9 +3105,6 @@
     <addaction name="actionImport_Map_Data_from_Json"/>
     <addaction name="actionExport_Map_Data_as_Json"/>
     <addaction name="actionExport_Map_Data_as_Bin"/>
-    <addaction name="actionImport_Metatile_Data_from_Json"/>
-    <addaction name="actionExport_Metatile_Data_as_Json"/>
-    <addaction name="actionExport_Metatile_Data_as_Bin"/>
     <addaction name="separator"/>
     <addaction name="actionOpen_Project_in_Text_Editor"/>
    </widget>
@@ -3416,21 +3413,6 @@
   <action name="actionExport_Map_Data_as_Bin">
    <property name="text">
     <string>Export All Map Data as bin</string>
-   </property>
-  </action>
-  <action name="actionImport_Metatile_Data_from_Json">
-   <property name="text">
-    <string>Import All Metatile Data from Json</string>
-   </property>
-  </action>
-  <action name="actionExport_Metatile_Data_as_Json">
-   <property name="text">
-    <string>Export All Metatile Data as Json</string>
-   </property>
-  </action>
-  <action name="actionExport_Metatile_Data_as_Bin">
-   <property name="text">
-    <string>Export All Metatile Data as Bin</string>
    </property>
   </action>
   <action name="actionProject_Settings">

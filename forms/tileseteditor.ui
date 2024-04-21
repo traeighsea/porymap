@@ -630,6 +630,10 @@
     <addaction name="actionExport_Secondary_Tiles_Image"/>
     <addaction name="actionExport_Primary_Metatiles_Image"/>
     <addaction name="actionExport_Secondary_Metatiles_Image"/>
+    <addaction name="separator"/>
+    <addaction name="actionImport_Metatile_Data_from_Json"/>
+    <addaction name="actionExport_Metatile_Data_as_Json"/>
+    <addaction name="actionExport_Metatile_Data_as_Bin"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -754,6 +758,21 @@
   <action name="actionExport_Secondary_Metatiles_Image">
    <property name="text">
     <string>Export Secondary Metatiles Image...</string>
+   </property>
+  </action>
+  <action name="actionImport_Metatile_Data_from_Json">
+   <property name="text">
+    <string>Import All Metatile Data from Json</string>
+   </property>
+  </action>
+  <action name="actionExport_Metatile_Data_as_Json">
+   <property name="text">
+    <string>Export All Metatile Data as Json</string>
+   </property>
+  </action>
+  <action name="actionExport_Metatile_Data_as_Bin">
+   <property name="text">
+    <string>Export All Metatile Data as Bin</string>
    </property>
   </action>
   <action name="actionCut">

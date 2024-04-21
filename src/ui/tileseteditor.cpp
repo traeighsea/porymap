@@ -983,6 +983,18 @@ void TilesetEditor::on_actionExport_Secondary_Metatiles_Image_triggered()
     }
 }
 
+void TilesetEditor::on_actionImport_Metatile_Data_from_Json_triggered() {
+   importMetatileDataFromJson();
+}
+
+void TilesetEditor::on_actionExport_Metatile_Data_as_Json_triggered() {
+   exportMetatileDataAsJson();
+}
+
+void TilesetEditor::on_actionExport_Metatile_Data_as_Bin_triggered() {
+   exportMetatileDataAsBin();
+}
+
 void TilesetEditor::on_actionImport_Primary_Metatiles_triggered()
 {
     this->importTilesetMetatiles(this->primaryTileset, true);
@@ -1040,6 +1052,18 @@ void TilesetEditor::importTilesetMetatiles(Tileset *tileset, bool primary)
     tileset->metatiles = metatiles;
     this->refresh();
     this->hasUnsavedChanges = true;
+}
+
+void TilesetEditor::importMetatileDataFromJson() {
+   project->importMetatileDataFromJson();
+}
+
+void TilesetEditor::exportMetatileDataAsJson() {
+   project->exportMetatileDataAsJson();
+}
+
+void TilesetEditor::exportMetatileDataAsBin() {
+   project->exportMetatileDataAsBin();
 }
 
 void TilesetEditor::on_actionShow_Unused_toggled(bool checked) {

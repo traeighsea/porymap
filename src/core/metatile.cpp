@@ -2,6 +2,17 @@
 #include "tileset.h"
 #include "project.h"
 
+namespace {
+   const char* AttrString[] = {
+   "behavior",
+   "terrainType",
+   "encounterType",
+   "layerType",
+   "unused",
+   "unlabeled"
+   };
+}
+
 // Stores how each attribute should be laid out for all metatiles, according to the vanilla games.
 // Used to set default config values and import maps with AdvanceMap.
 static const QMap<Metatile::Attr, BitPacker> attributePackersFRLG = {
@@ -18,6 +29,14 @@ static const QMap<Metatile::Attr, BitPacker> attributePackersRSE = {
 };
 
 static QMap<Metatile::Attr, BitPacker> attributePackers;
+
+const char* Metatile::AttrEnumToString(const Attr& attribute) {
+   if (attribute > Attr::Unused) {
+      return AttrString[5] + attribute;
+   }
+
+   return AttrString[attribute];
+}
 
 Metatile::Metatile(const int numTiles) {
     Tile tile = Tile();
@@ -60,6 +79,10 @@ uint32_t Metatile::getAttributes() const {
         data |= packer.pack(i.value());
     }
     return data;
+}
+
+const QMap<Metatile::Attr, uint32_t>& Metatile::getAttributesMap() const {
+   return attributes;
 }
 
 // Unpack and insert metatile attributes from the given data.

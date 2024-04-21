@@ -21,6 +21,8 @@
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <algorithm>
+#include <cstdint>
+#include <string>
 
 using OrderedJson = poryjson::Json;
 using OrderedJsonDoc = poryjson::JsonDoc;
@@ -982,6 +984,79 @@ void Project::saveTilesetMetatiles(Tileset *tileset) {
     }
 }
 
+void Project::saveTilesetMetatileAttributesAsJson(Tileset * tileset) {
+    auto path = tileset->metatile_attrs_path;
+    path.erase(path.end()-3, path.end());
+    path+= "json";
+
+    QFile metatileAttrFile(path);
+    if (metatileAttrFile.open(QIODevice::WriteOnly)) {        
+        OrderedJson::array metatileAttrArr;
+        for (Metatile *metatile : tileset->metatiles) {
+            OrderedJson::object metatileAttributeObj;
+            auto attributeMap = metatile->getAttributesMap();
+            auto keys = attributeMap.keys();
+            for (auto attribute: keys) {
+                auto key = Metatile::AttrEnumToString(attribute);
+
+                metatileAttributeObj[key] = static_cast<int>(attributeMap[attribute]);
+            }
+            OrderedJson::object metatileObj;
+            metatileObj["attributes"] = metatileAttributeObj;
+
+            metatileAttrArr.push_back(metatileObj);
+        }
+        OrderedJson::object metatilesObj;
+        metatilesObj["metatileAttributes"] = metatileAttrArr;
+
+        OrderedJson metatileAttrsJson(metatilesObj);
+        OrderedJsonDoc jsonDoc(&metatileAttrsJson);
+        ignoreWatchedFileTemporarily(path);
+        jsonDoc.dump(&metatileAttrFile);
+    } else {
+        tileset->metatiles.clear();
+        logError(QString("Could not open tileset metatiles file '%1'").arg(path));
+    }
+}
+
+void Project::saveTilesetMetatilesAsJson(Tileset *tileset) {
+    auto path = tileset->metatiles_path;
+    path.erase(path.end()-3, path.end());
+    path+= "json";
+
+    QFile metatilesFile(path);
+    if (metatilesFile.open(QIODevice::WriteOnly)) {
+        int numTiles = projectConfig.getNumTilesInMetatile();
+        
+        OrderedJson::array metatilesArr;
+        for (Metatile *metatile : tileset->metatiles) {
+            OrderedJson::array tileArr;
+            for (int i = 0; i < numTiles; i++) {
+                OrderedJson::object tileObj;
+                tileObj["tileId"] = metatile->tiles[i].tileId;
+                tileObj["xflip"] = metatile->tiles[i].xflip;
+                tileObj["yflip"] = metatile->tiles[i].yflip;
+                tileObj["palette"] = metatile->tiles[i].palette;
+                tileArr.push_back(tileObj);
+            }
+            OrderedJson::object metatileObj;
+            metatileObj["tiles"] = tileArr;
+
+            metatilesArr.push_back(metatileObj);
+        }
+        OrderedJson::object metatilesObj;
+        metatilesObj["metatiles"] = metatilesArr;
+
+        OrderedJson metatilesJson(metatilesObj);
+        OrderedJsonDoc jsonDoc(&metatilesJson);
+        ignoreWatchedFileTemporarily(path);
+        jsonDoc.dump(&metatilesFile);
+    } else {
+        tileset->metatiles.clear();
+        logError(QString("Could not open tileset metatile attr file '%1'").arg(path));
+    }
+}
+
 void Project::saveTilesetTilesImage(Tileset *tileset) {
     // Only write the tiles image if it was changed.
     // Porymap will only ever change an existing tiles image by importing a new one.
@@ -1575,6 +1650,196 @@ void Project::loadTilesetMetatiles(Tileset* tileset) {
     }
 }
 
+void Project::readMetatilesFromJson(QString path, QList<Metatile*>& metatiles) {
+    if (!metatiles.empty()) {
+        logError(QString("Expected metatiles list to be empty at %1").arg(path));
+        return;
+    }
+
+    fileWatcher.addPath(path);
+    QJsonDocument metatilesDoc;
+    if (!parser.tryParseJsonFile(&metatilesDoc, path)) {
+        logError(QString("Failed to read metatiles from %1").arg(path));
+        return;
+    }
+
+    // TODO(@Traeighsea): Add a field to the json to describe double vs tripple tiled, read it here
+
+    QJsonObject metatilesObj = metatilesDoc.object();
+    QJsonArray metatilesArr = metatilesObj["metatiles"].toArray();
+    if (metatilesArr.size() == 0) {
+        logError(QString("'metatiles' array is missing from %1.").arg(path));
+        // TODO(@Traeighsea): Figure out the best way to error out or keep it going for these returns
+        return;
+    }
+
+    QList<QString> requiredFields = QList<QString>{
+        "tiles",
+    };
+
+    for (int i = 0; i < metatilesArr.size(); i++) {
+        QJsonObject tilesObj = metatilesArr[i].toObject();
+        if (tilesObj.isEmpty())
+            continue;
+        if (!parser.ensureFieldsExist(tilesObj, requiredFields)) {
+            logError(QString("Metatile %1 is missing field(s) in %2.").arg(i).arg(path));
+            return;
+        }
+
+        int tilesPerMetatile = projectConfig.getNumTilesInMetatile();
+        QJsonArray tilesArr = tilesObj["tiles"].toArray();
+        if (tilesArr.size() == 0) {
+            logError(QString("'tiles' array is missing from %1.").arg(path));
+            return;
+        } else if (tilesArr.size() != tilesPerMetatile) {
+            logError(QString("'tiles' at index %1 array size %2 different than project config Number of Tiles in Metatile %3.").arg(i).arg(tilesArr.size()).arg(tilesPerMetatile));
+            return;
+        }
+
+        Metatile* metatile = new Metatile();
+        for (int j = 0; j < tilesPerMetatile; j++) {
+            QJsonObject tileObj = tilesArr[j].toObject();
+            if (tilesObj.isEmpty())
+                continue;
+            QList<QString> tileRequiredFields = QList<QString>{
+                "tileId",
+                "xflip",
+                "yflip",
+                "palette",
+            };
+            if (!parser.ensureFieldsExist(tileObj, tileRequiredFields)) {
+                logError(QString("Metatile %1 is missing field(s) in %2.").arg(i).arg(path));
+                return;
+            }
+
+            bool succeeded{true};
+            Tile tile;
+
+            tile.tileId = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["tileId"], &succeeded));
+            if (!succeeded) {
+                // TODO(traeighsea): Update to check size of read in value
+                logError(QString("Missing 'tileId' value on layout %1 in %2").arg(i).arg(path));
+                return;
+            }
+
+            tile.xflip = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["xflip"], &succeeded));
+            if (!succeeded) {
+                // TODO(traeighsea): Update to check size of read in value
+                logError(QString("Missing 'xflip' value on layout %1 in %2").arg(i).arg(path));
+                return;
+            }
+
+            tile.yflip = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["yflip"], &succeeded));
+            if (!succeeded) {
+                // TODO(traeighsea): Update to check size of read in value
+                logError(QString("Missing 'yflip' value on layout %1 in %2").arg(i).arg(path));
+                return;
+            }
+
+            tile.palette = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["palette"], &succeeded));
+            if (!succeeded) {
+                // TODO(traeighsea): Update to check size of read in value
+                logError(QString("Missing 'palette' value on layout %1 in %2").arg(i).arg(path));
+                return;
+            }
+
+            metatile->tiles.append(tile);
+        }
+        metatiles.append(std::move(metatile));
+    }
+}
+
+void Project::readMetatileAttrsFromJson(QString path, QList<Metatile*>& metatiles) {
+    if (metatiles.empty()) {
+        logError(QString("Expected metatile list to not be empty at %1").arg(path));
+        return;
+    }
+
+    fileWatcher.addPath(path);
+    QJsonDocument metatileAttrDoc;
+    if (!parser.tryParseJsonFile(&metatileAttrDoc, path)) {
+        logError(QString("Failed to read metatiles from %1").arg(path));
+        return;
+    }
+
+    // TODO(@Traeighsea): Add a field to the json to describe how vars are packed, read it here
+
+    QJsonObject metatilesObj = metatileAttrDoc.object();
+    QJsonArray metatileAttrArr = metatilesObj["metatileAttributes"].toArray();
+    if (metatileAttrArr.size() == 0) {
+        logError(QString("'metatileAttributes' array is missing from %1.").arg(path));
+        // TODO(@Traeighsea): Figure out the best way to error out or keep it going for these returns
+        return;
+    }
+
+    QList<QString> requiredFields = QList<QString>{
+        "attributes",
+    };
+
+    for (int i = 0; i < metatileAttrArr.size(); i++) {
+        QJsonObject metatileAttrObj = metatileAttrArr[i].toObject();
+        if (metatileAttrObj.isEmpty())
+            continue;
+        if (!parser.ensureFieldsExist(metatileAttrObj, requiredFields)) {
+            logError(QString("Metatile attribute %1 is missing field(s) in %2.").arg(i).arg(path));
+            return;
+        }
+
+        QList<QString> metatileAttributesRequiredFields = QList<QString>{
+            "behavior",
+            "layerType"
+        };
+
+        QJsonObject attrObj = metatilesObj["attributes"].toObject();
+        if (!parser.ensureFieldsExist(attrObj, metatileAttributesRequiredFields)) {
+            logError(QString("Metatile attribute %1 is missing field(s) in %2.").arg(i).arg(path));
+            return;
+        }
+
+        bool succeeded{true};
+
+        // Loop through all the attributes
+        // Allow arbitrarily named keys and set them accordingly
+        for (auto key: attrObj.keys()){
+            if (key == "behavior") {
+                auto attr = static_cast<uint16_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
+                metatiles.at(i)->setAttribute(Metatile::Attr::Behavior, attr);
+            } else if (key == "terrainType") {
+                auto attr = static_cast<uint16_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
+                metatiles.at(i)->setAttribute(Metatile::Attr::TerrainType, attr);
+            } else if (key == "encounterType") {
+                auto attr = static_cast<uint16_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
+                metatiles.at(i)->setAttribute(Metatile::Attr::EncounterType, attr);
+            } else if (key == "layerType") {
+                auto attr = static_cast<uint16_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
+                metatiles.at(i)->setAttribute(Metatile::Attr::LayerType, attr);
+            } else if (key == "unused") {
+                auto attr = static_cast<uint16_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
+                metatiles.at(i)->setAttribute(Metatile::Attr::Unused, attr);
+            } else {
+                // TODO(@traeighsea): Custom attributes
+                logError(QString("Unknown metatile attribute field for metatile %1 in %2").arg(i).arg(path));
+            }
+        }
+    }
+}
+
+void Project::loadTilesetMetatilesFromJson(Tileset* tileset) {
+    QList<Metatile*> metatiles;
+
+    auto metatilesPath = tileset->metatiles_path;
+    metatilesPath.erase(metatilesPath.end()-3, metatilesPath.end());
+    metatilesPath+= "json";
+    readMetatilesFromJson(metatilesPath, metatiles);
+
+    auto metatileAttrsPath = tileset->metatile_attrs_path;
+    metatileAttrsPath.erase(metatileAttrsPath.end()-3, metatileAttrsPath.end());
+    metatileAttrsPath+= "json";
+    readMetatilesFromJson(metatileAttrsPath, metatiles);
+
+    tileset->metatiles = metatiles;
+}
+
 QString Project::findMetatileLabelsTileset(QString label) {
     for (QString tilesetName : this->tilesetLabelsOrdered) {
         QString metatileLabelPrefix = Tileset::getMetatileLabelPrefix(tilesetName);
@@ -1679,12 +1944,14 @@ Blockdata Project::readBlockdataFromJson(QString path) {
             logError(QString("Missing 'metatileId' value on layout %1 in %2").arg(i).arg(path));
             return blockdata;
         }
+
         block.setCollision(ParseUtil::jsonToInt(blockDataObj["collision"], &succeeded));
         if (!succeeded) {
             // TODO(traeighsea): Update to check size of read in value
             logError(QString("Missing 'collision' value on layout %1 in %2").arg(i).arg(path));
             return blockdata;
         }
+
         block.setElevation(ParseUtil::jsonToInt(blockDataObj["elevation"], &succeeded));
         if (!succeeded) {
             // TODO(traeighsea): Update to check size of read in value
@@ -2259,10 +2526,12 @@ bool Project::exportMapDataAsBin() {
     for (auto mapLayout : mapLayouts) {
         // Export map block data
         QString blockdataPath = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
+        loadBlockdataFromJson(mapLayout);
         writeBlockdata(blockdataPath, mapLayout->blockdata);
 
         // Export border data
         QString borderPath = QString("%1/%2").arg(root).arg(mapLayout->border_path);
+        loadLayoutBorderFromJson(mapLayout);
         writeBlockdata(borderPath, mapLayout->border);
     }
 
@@ -2270,17 +2539,31 @@ bool Project::exportMapDataAsBin() {
 }
 
 bool Project::importMetatileDataFromJson() {
-
+    readTilesetLabels();
+    for (auto tilesetLabel: tilesetLabelsOrdered) {
+        auto tileset = getTileset(tilesetLabel, true);
+        loadTilesetMetatilesFromJson(tileset);
+    }
     return true;
 }
 
 bool Project::exportMetatileDataAsJson() {
-
+    readTilesetLabels();
+    for (auto tilesetLabel: tilesetLabelsOrdered) {
+        auto tileset = getTileset(tilesetLabel, true);
+        saveTilesetMetatilesAsJson(tileset);
+        saveTilesetMetatileAttributesAsJson(tileset);
+    }
     return true;
 }
 
 bool Project::exportMetatileDataAsBin() {
-
+    readTilesetLabels();
+    for (auto tilesetLabel: tilesetLabelsOrdered) {
+        auto tileset = getTileset(tilesetLabel, true);
+        saveTilesetMetatiles(tileset);
+        saveTilesetMetatileAttributes(tileset);
+    }
     return true;
 }
 
