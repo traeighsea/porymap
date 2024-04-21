@@ -872,10 +872,17 @@ void Project::saveHealLocationsConstants() {
 
 void Project::saveTilesets(Tileset *primaryTileset, Tileset *secondaryTileset) {
     saveTilesetMetatileLabels(primaryTileset, secondaryTileset);
-    saveTilesetMetatileAttributes(primaryTileset);
-    saveTilesetMetatileAttributes(secondaryTileset);
-    saveTilesetMetatiles(primaryTileset);
-    saveTilesetMetatiles(secondaryTileset);
+    if(projectConfig.getTilesetsStoreMetatileDataAsJson()) {
+        saveTilesetMetatileAttributesAsJson(primaryTileset);
+        saveTilesetMetatileAttributesAsJson(secondaryTileset);
+        saveTilesetMetatilesAsJson(primaryTileset);
+        saveTilesetMetatilesAsJson(secondaryTileset);
+    } else {
+        saveTilesetMetatileAttributes(primaryTileset);
+        saveTilesetMetatileAttributes(secondaryTileset);
+        saveTilesetMetatiles(primaryTileset);
+        saveTilesetMetatiles(secondaryTileset);
+    }
     saveTilesetTilesImage(primaryTileset);
     saveTilesetTilesImage(secondaryTileset);
     saveTilesetPalettes(primaryTileset);
