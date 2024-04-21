@@ -976,6 +976,16 @@
                     </property>
                    </widget>
                   </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_TilesetStoreMetatileDataAsJson">
+                    <property name="toolTip">
+                     <string>Whether to save and load metatiles using json instead of binary format</string>
+                    </property>
+                    <property name="text">
+                     <string>Store Metatile data as json (Experimental)</string>
+                    </property>
+                   </widget>
+                  </item>
                  </layout>
                 </widget>
                </item>

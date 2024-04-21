@@ -989,6 +989,8 @@ void ProjectConfig::parseConfigKeyValue(QString key, QString value) {
         this->tilesetsHaveCallback = getConfigBool(key, value);
     } else if (key == "tilesets_have_is_compressed") {
         this->tilesetsHaveIsCompressed = getConfigBool(key, value);
+    } else if (key == "tilesets_store_metatile_data_as_json") {
+        this->tilesetsStoreMetatileDataAsJson = getConfigBool(key, value);
     } else if (key == "event_icon_path_object") {
         this->eventIconPaths[Event::Group::Object] = value;
     } else if (key == "event_icon_path_warp") {
@@ -1078,6 +1080,7 @@ QMap<QString, QString> ProjectConfig::getKeyValueMap() {
     }
     map.insert("tilesets_have_callback", QString::number(this->tilesetsHaveCallback));
     map.insert("tilesets_have_is_compressed", QString::number(this->tilesetsHaveIsCompressed));
+    map.insert("tilesets_store_metatile_data_as_json", QString::number(this->tilesetsStoreMetatileDataAsJson));
     map.insert("metatile_attributes_size", QString::number(this->metatileAttributesSize));
     map.insert("metatile_behavior_mask", "0x" + QString::number(this->metatileBehaviorMask, 16).toUpper());
     map.insert("metatile_terrain_type_mask", "0x" + QString::number(this->metatileTerrainTypeMask, 16).toUpper());
@@ -1436,6 +1439,15 @@ void ProjectConfig::setTilesetsHaveIsCompressed(bool has) {
 
 bool ProjectConfig::getTilesetsHaveIsCompressed() {
     return this->tilesetsHaveIsCompressed;
+}
+
+void ProjectConfig::setTilesetsStoreMetatileDataAsJson(bool enabled) {
+    this->tilesetsStoreMetatileDataAsJson = enabled;
+    this->save();
+}
+
+bool ProjectConfig::getTilesetsStoreMetatileDataAsJson() {
+    return this->tilesetsStoreMetatileDataAsJson;
 }
 
 int ProjectConfig::getMetatileAttributesSize() {

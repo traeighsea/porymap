@@ -451,6 +451,7 @@ void ProjectSettingsEditor::refresh() {
     ui->checkBox_EnableCustomBorderSize->setChecked(projectConfig.getUseCustomBorderSize());
     ui->checkBox_OutputCallback->setChecked(projectConfig.getTilesetsHaveCallback());
     ui->checkBox_OutputIsCompressed->setChecked(projectConfig.getTilesetsHaveIsCompressed());
+    ui->checkBox_TilesetStoreMetatileDataAsJson->setChecked(projectConfig.getTilesetsStoreMetatileDataAsJson());
     ui->checkBox_DisableWarning->setChecked(porymapConfig.getWarpBehaviorWarningDisabled());
 
     // Set spin box values
@@ -527,6 +528,7 @@ void ProjectSettingsEditor::save() {
     projectConfig.setUseCustomBorderSize(ui->checkBox_EnableCustomBorderSize->isChecked());
     projectConfig.setTilesetsHaveCallback(ui->checkBox_OutputCallback->isChecked());
     projectConfig.setTilesetsHaveIsCompressed(ui->checkBox_OutputIsCompressed->isChecked());
+    projectConfig.setTilesetsStoreMetatileDataAsJson(ui->checkBox_TilesetStoreMetatileDataAsJson->isChecked());    
     porymapConfig.setWarpBehaviorWarningDisabled(ui->checkBox_DisableWarning->isChecked());
 
     // Save spin box settings

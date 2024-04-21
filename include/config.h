@@ -339,6 +339,7 @@ public:
         this->prefabImportPrompted = false;
         this->tilesetsHaveCallback = true;
         this->tilesetsHaveIsCompressed = true;
+        this->tilesetsStoreMetatileDataAsJson = false;
         this->filePaths.clear();
         this->eventIconPaths.clear();
         this->pokemonIconPaths.clear();
@@ -418,6 +419,8 @@ public:
     bool getTilesetsHaveCallback();
     void setTilesetsHaveIsCompressed(bool has);
     bool getTilesetsHaveIsCompressed();
+    void setTilesetsStoreMetatileDataAsJson(bool enabled);
+    bool getTilesetsStoreMetatileDataAsJson();
     int getMetatileAttributesSize();
     void setMetatileAttributesSize(int size);
     uint32_t getMetatileBehaviorMask();
@@ -484,6 +487,7 @@ private:
     bool prefabImportPrompted;
     bool tilesetsHaveCallback;
     bool tilesetsHaveIsCompressed;
+    bool tilesetsStoreMetatileDataAsJson;
     int metatileAttributesSize;
     uint32_t metatileBehaviorMask;
     uint32_t metatileTerrainTypeMask;

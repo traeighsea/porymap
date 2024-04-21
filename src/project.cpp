@@ -1508,7 +1508,7 @@ void Project::loadTilesetAssets(Tileset* tileset) {
         image = QImage(8, 8, QImage::Format_Indexed8);
     }
     this->loadTilesetTiles(tileset, image);
-    this->loadTilesetMetatiles(tileset);
+    projectConfig.getTilesetsStoreMetatileDataAsJson() ? this->loadTilesetMetatilesFromJson(tileset) : this->loadTilesetMetatiles(tileset);
     this->loadTilesetMetatileLabels(tileset);
     this->loadTilesetPalettes(tileset);
 }
