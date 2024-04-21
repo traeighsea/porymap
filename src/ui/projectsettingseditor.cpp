@@ -438,7 +438,7 @@ void ProjectSettingsEditor::refresh() {
     ui->checkBox_UsePoryscript->setChecked(projectConfig.getUsePoryScript());
     ui->checkBox_ShowWildEncounterTables->setChecked(userConfig.getEncounterJsonActive());
     ui->checkBox_CreateTextFile->setChecked(projectConfig.getCreateMapTextFileEnabled());
-    ui->checkBox_CreateJsonFilesForMapData->setChecked(projectConfig.getCreateJsonFilesForMapDataEnabled());
+    ui->checkBox_LayoutStoreMapDataAsJson->setChecked(projectConfig.getLayoutStoreMapDataAsJsonEnabled());
     ui->checkBox_EnableTripleLayerMetatiles->setChecked(projectConfig.getTripleLayerMetatilesEnabled());
     ui->checkBox_EnableRequiresItemfinder->setChecked(projectConfig.getHiddenItemRequiresItemfinderEnabled());
     ui->checkBox_EnableQuantity->setChecked(projectConfig.getHiddenItemQuantityEnabled());
@@ -515,7 +515,7 @@ void ProjectSettingsEditor::save() {
     projectConfig.setUsePoryScript(ui->checkBox_UsePoryscript->isChecked());
     userConfig.setEncounterJsonActive(ui->checkBox_ShowWildEncounterTables->isChecked());
     projectConfig.setCreateMapTextFileEnabled(ui->checkBox_CreateTextFile->isChecked());
-    projectConfig.setCreateJsonFilesForMapDataEnabled(ui->checkBox_CreateJsonFilesForMapData->isChecked());
+    projectConfig.setLayoutStoreMapDataAsJsonEnabled(ui->checkBox_LayoutStoreMapDataAsJson->isChecked());
     projectConfig.setTripleLayerMetatilesEnabled(ui->checkBox_EnableTripleLayerMetatiles->isChecked());
     projectConfig.setHiddenItemRequiresItemfinderEnabled(ui->checkBox_EnableRequiresItemfinder->isChecked());
     projectConfig.setHiddenItemQuantityEnabled(ui->checkBox_EnableQuantity->isChecked());

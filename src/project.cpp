@@ -375,8 +375,8 @@ QString Project::readMapLocation(QString map_name) {
 bool Project::loadLayout(MapLayout *layout) {
     // Force these to run even if one fails
     bool loadedTilesets = loadLayoutTilesets(layout);
-    bool loadedBlockdata = (projectConfig.getCreateJsonFilesForMapDataEnabled()) ? loadBlockdataFromJson(layout) : loadBlockdata(layout);
-    bool loadedBorder = (projectConfig.getCreateJsonFilesForMapDataEnabled()) ? loadLayoutBorderFromJson(layout) : loadLayoutBorder(layout);
+    bool loadedBlockdata = (projectConfig.getLayoutStoreMapDataAsJsonEnabled()) ? loadBlockdataFromJson(layout) : loadBlockdata(layout);
+    bool loadedBorder = (projectConfig.getLayoutStoreMapDataAsJsonEnabled()) ? loadLayoutBorderFromJson(layout) : loadLayoutBorder(layout);
 
     return loadedTilesets 
         && loadedBlockdata 
@@ -1456,7 +1456,7 @@ void Project::saveMap(Map *map) {
     jsonDoc.dump(&mapFile);
     mapFile.close();
 
-    if (projectConfig.getCreateJsonFilesForMapDataEnabled()) {
+    if (projectConfig.getLayoutStoreMapDataAsJsonEnabled()) {
         // TODO(@traeighsea): check the files and convert to json file extension
         // Create file data/layouts/<map_name>/border.json
         saveLayoutBorderAsJson(map);

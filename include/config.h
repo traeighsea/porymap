@@ -383,8 +383,8 @@ public:
     bool getFloorNumberEnabled();
     void setCreateMapTextFileEnabled(bool enable);
     bool getCreateMapTextFileEnabled();
-    void setCreateJsonFilesForMapDataEnabled(bool enable);
-    bool getCreateJsonFilesForMapDataEnabled();
+    void setLayoutStoreMapDataAsJsonEnabled(bool enable);
+    bool getLayoutStoreMapDataAsJsonEnabled();
     void setTripleLayerMetatilesEnabled(bool enable);
     bool getTripleLayerMetatilesEnabled();
     int getNumLayersInMetatile();
