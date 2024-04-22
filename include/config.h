@@ -474,7 +474,7 @@ private:
     bool enableEventCloneObject;
     bool enableFloorNumber;
     bool createMapTextFile;
-    bool createJsonFilesForMapData;
+    bool layoutStoreMapDataAsJson;
     bool enableTripleLayerMetatiles;
     uint16_t defaultMetatileId;
     uint16_t defaultElevation;

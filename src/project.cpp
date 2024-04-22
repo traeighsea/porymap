@@ -56,6 +56,16 @@ namespace {
         stream >> retVal;
         return retVal;
     }
+
+    std::string replaceFileExtension(const std::string& path, const std::string& extension) {
+        size_t lastdot = path.find_last_of(".");
+        return path.substr(0, lastdot) + "." + extension; 
+    }
+
+    QString replaceFileExtension(const QString& path, const std::string& extension) {
+        auto strPath = replaceFileExtension(path.QString::toStdString(), extension);
+        return QString::fromStdString(strPath); 
+    }
 }
 
 Project::Project(QWidget *parent) :
@@ -979,27 +989,21 @@ void Project::saveTilesetMetatileLabels(Tileset *primaryTileset, Tileset *second
 }
 
 void Project::saveTilesetMetatileAttributes(Tileset *tileset) {
-    QFile attrs_file(tileset->metatile_attrs_path);
-    if (attrs_file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        QByteArray data;
-        int attrSize = projectConfig.getMetatileAttributesSize();
-        for (Metatile *metatile : tileset->metatiles) {
-            uint32_t attributes = metatile->getAttributes();
-            for (int i = 0; i < attrSize; i++)
-                data.append(static_cast<char>(attributes >> (8 * i)));
-        }
-        attrs_file.write(data);
-    } else {
-        logError(QString("Could not save tileset metatile attributes file '%1'").arg(tileset->metatile_attrs_path));
-    }
+    auto path = tileset->metatile_attrs_path;
+    writeTilesetMetatileAttributes(path, tileset->metatiles);
 }
 
 void Project::saveTilesetMetatiles(Tileset *tileset) {
-    QFile metatiles_file(tileset->metatiles_path);
+    auto path = tileset->metatiles_path;
+    writeTilesetMetatiles(path, tileset->metatiles);
+}
+
+void Project::writeTilesetMetatiles(QString path, const QList<Metatile *>& metatiles) {
+    QFile metatiles_file(path);
     if (metatiles_file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         QByteArray data;
         int numTiles = projectConfig.getNumTilesInMetatile();
-        for (Metatile *metatile : tileset->metatiles) {
+        for (Metatile *metatile : metatiles) {
             for (int i = 0; i < numTiles; i++) {
                 uint16_t tile = metatile->tiles.at(i).rawValue();
                 data.append(static_cast<char>(tile));
@@ -1008,23 +1012,96 @@ void Project::saveTilesetMetatiles(Tileset *tileset) {
         }
         metatiles_file.write(data);
     } else {
-        tileset->metatiles.clear();
-        logError(QString("Could not open tileset metatiles file '%1'").arg(tileset->metatiles_path));
+        // TODO(@Traeighsea): Verify we don't need to clear here: metatiles.clear();
+        logError(QString("Could not open tileset metatiles file '%1'").arg(path));
+    }
+}
+
+void Project::writeTilesetMetatileAttributes(QString path, const QList<Metatile *>& metatiles) {
+    QFile attrs_file(path);
+    if (attrs_file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        QByteArray data;
+        int attrSize = projectConfig.getMetatileAttributesSize();
+        for (Metatile *metatile : metatiles) {
+            uint32_t attributes = metatile->getAttributes();
+            for (int i = 0; i < attrSize; i++)
+                data.append(static_cast<char>(attributes >> (8 * i)));
+        }
+        attrs_file.write(data);
+    } else {
+        logError(QString("Could not save tileset metatile attributes file '%1'").arg(path));
     }
 }
 
 void Project::saveTilesetMetatileAttributesAsJson(Tileset * tileset) {
     auto path = tileset->metatile_attrs_path;
+    writeTilesetMetatileAttributesAsJson(path, tileset->metatiles, tileset->is_secondary);
+}
 
+void Project::saveTilesetMetatilesAsJson(Tileset *tileset) {
+    auto path = tileset->metatiles_path;
+    writeTilesetMetatilesAsJson(path, tileset->metatiles, tileset->is_secondary);
+}
+
+void Project::writeTilesetMetatilesAsJson(QString path, const QList<Metatile *>& metatiles, bool isSecondary) {
+    QFile metatilesFile(path);
+    if (metatilesFile.open(QIODevice::WriteOnly)) {
+        OrderedJson::object metatilesObj;
+
+        // We want to describe how the data is serialized, which can ignore project wide settings
+        int numMetatiles = isSecondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
+        if (metatiles.size() != numMetatiles) {
+            // if there's a differing number of metatiles, we want to ignore the project config setting
+            numMetatiles = metatiles.size();
+            // TODO(@Traeighsea): Emit a warning
+        }
+        metatilesObj["numMetatiles"] = numMetatiles;
+
+        int numTilesInMetatile = projectConfig.getNumTilesInMetatile();
+        if (metatiles[0]->tiles.size() != numTilesInMetatile) {
+            // if there's a differing number of tiles, we want to ignore the project config setting
+            numTilesInMetatile = metatiles[0]->tiles.size();
+            // TODO(@Traeighsea): Emit a warning
+        }
+        metatilesObj["numTilesInMetatile"] = numTilesInMetatile;
+
+        OrderedJson::array metatilesArr;
+        for (Metatile *metatile : metatiles) {
+            OrderedJson::array tileArr;
+            for (int i = 0; i < metatile->tiles.size(); i++) {
+                OrderedJson::object tileObj;
+                tileObj["tileId"] = metatile->tiles[i].tileId;
+                tileObj["xflip"] = metatile->tiles[i].xflip;
+                tileObj["yflip"] = metatile->tiles[i].yflip;
+                tileObj["palette"] = metatile->tiles[i].palette;
+                tileArr.push_back(tileObj);
+            }
+            OrderedJson::object metatileObj;
+            metatileObj["tiles"] = tileArr;
+
+            metatilesArr.push_back(metatileObj);
+        }
+        metatilesObj["metatiles"] = metatilesArr;
+
+        OrderedJson metatilesJson(metatilesObj);
+        OrderedJsonDoc jsonDoc(&metatilesJson);
+        ignoreWatchedFileTemporarily(path);
+        jsonDoc.dump(&metatilesFile);
+    } else {
+        logError(QString("Could not open tileset metatile attr file '%1'").arg(path));
+    }
+}
+
+void Project::writeTilesetMetatileAttributesAsJson(QString path, const QList<Metatile *>& metatiles, bool isSecondary) {
     QFile metatileAttrFile(path);
     if (metatileAttrFile.open(QIODevice::WriteOnly)) {      
         OrderedJson::object metatilesObj;
 
         // We want to describe how the data is serialized, which can ignore project wide settings
-        int numMetatiles = tileset->is_secondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
-        if (tileset->metatiles.size() != numMetatiles) {
+        int numMetatiles = isSecondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
+        if (metatiles.size() != numMetatiles) {
             // if there's a differing number of metatiles, we want to ignore the project config setting
-            numMetatiles = tileset->metatiles.size();
+            numMetatiles = metatiles.size();
             // TODO(@Traeighsea): Emit a warning
         }
         metatilesObj["numMetatiles"] = numMetatiles;
@@ -1053,7 +1130,7 @@ void Project::saveTilesetMetatileAttributesAsJson(Tileset * tileset) {
         metatilesObj["attributeMasks"] = attributeMasksObj;
 
         OrderedJson::array metatileAttrArr;
-        for (Metatile *metatile : tileset->metatiles) {
+        for (Metatile *metatile : metatiles) {
             OrderedJson::object metatileAttributeObj;
             auto attributeMap = metatile->getAttributesMap();
             auto keys = attributeMap.keys();
@@ -1074,60 +1151,7 @@ void Project::saveTilesetMetatileAttributesAsJson(Tileset * tileset) {
         ignoreWatchedFileTemporarily(path);
         jsonDoc.dump(&metatileAttrFile);
     } else {
-        tileset->metatiles.clear();
         logError(QString("Could not open tileset metatiles file '%1'").arg(path));
-    }
-}
-
-void Project::saveTilesetMetatilesAsJson(Tileset *tileset) {
-    auto path = tileset->metatiles_path;
-
-    QFile metatilesFile(path);
-    if (metatilesFile.open(QIODevice::WriteOnly)) {
-        OrderedJson::object metatilesObj;
-
-        // We want to describe how the data is serialized, which can ignore project wide settings
-        int numMetatiles = tileset->is_secondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
-        if (tileset->metatiles.size() != numMetatiles) {
-            // if there's a differing number of metatiles, we want to ignore the project config setting
-            numMetatiles = tileset->metatiles.size();
-            // TODO(@Traeighsea): Emit a warning
-        }
-        metatilesObj["numMetatiles"] = numMetatiles;
-
-        int numTilesInMetatile = projectConfig.getNumTilesInMetatile();
-        if (tileset->metatiles[0]->tiles.size() != numTilesInMetatile) {
-            // if there's a differing number of tiles, we want to ignore the project config setting
-            numTilesInMetatile = tileset->metatiles[0]->tiles.size();
-            // TODO(@Traeighsea): Emit a warning
-        }
-        metatilesObj["numTilesInMetatile"] = numTilesInMetatile;
-        
-        OrderedJson::array metatilesArr;
-        for (Metatile *metatile : tileset->metatiles) {
-            OrderedJson::array tileArr;
-            for (int i = 0; i < metatile->tiles.size(); i++) {
-                OrderedJson::object tileObj;
-                tileObj["tileId"] = metatile->tiles[i].tileId;
-                tileObj["xflip"] = metatile->tiles[i].xflip;
-                tileObj["yflip"] = metatile->tiles[i].yflip;
-                tileObj["palette"] = metatile->tiles[i].palette;
-                tileArr.push_back(tileObj);
-            }
-            OrderedJson::object metatileObj;
-            metatileObj["tiles"] = tileArr;
-
-            metatilesArr.push_back(metatileObj);
-        }
-        metatilesObj["metatiles"] = metatilesArr;
-
-        OrderedJson metatilesJson(metatilesObj);
-        OrderedJsonDoc jsonDoc(&metatilesJson);
-        ignoreWatchedFileTemporarily(path);
-        jsonDoc.dump(&metatilesFile);
-    } else {
-        tileset->metatiles.clear();
-        logError(QString("Could not open tileset metatile attr file '%1'").arg(path));
     }
 }
 
@@ -1237,8 +1261,6 @@ bool Project::loadBlockdata(MapLayout *layout) {
 
 bool Project::loadBlockdataFromJson(MapLayout *layout) {
     QString path = QString("%1/%2").arg(root).arg(layout->blockdata_path);
-    // TODO(@traeighsea): update to check file extension
-
     layout->blockdata = readBlockdataFromJson(path);
     layout->lastCommitBlocks.blocks = layout->blockdata;
     layout->lastCommitBlocks.mapDimensions = QSize(layout->getWidth(), layout->getHeight());
@@ -1638,7 +1660,7 @@ void Project::readTilesetPaths(Tileset* tileset) {
             if (projectConfig.getTilesetsStoreMetatileDataAsJson()) {
                 // If we're storing metatile data as json, we want to update the path to use json, 
                 // however we still want to keep the bin file extension in the header file
-                auto updatedPath = metatilesPath;
+                auto updatedPath = metatileAttrsPath;
                 updatedPath.erase(updatedPath.end()-3, updatedPath.end());
                 updatedPath += "json";
                 tileset->metatile_attrs_path = rootDir + updatedPath;
@@ -1699,14 +1721,13 @@ void Project::loadTilesetTiles(Tileset *tileset, QImage image) {
     tileset->tiles = tiles;
 }
 
-void Project::loadTilesetMetatiles(Tileset* tileset) {
-    QFile metatiles_file(tileset->metatiles_path);
+void Project::readTilesetMetatiles(QString path, QList<Metatile *>& metatiles) {
+    QFile metatiles_file(path);
     if (metatiles_file.open(QIODevice::ReadOnly)) {
         QByteArray data = metatiles_file.readAll();
         int tilesPerMetatile = projectConfig.getNumTilesInMetatile();
         int bytesPerMetatile = 2 * tilesPerMetatile;
         int num_metatiles = data.length() / bytesPerMetatile;
-        QList<Metatile*> metatiles;
         for (int i = 0; i < num_metatiles; i++) {
             Metatile *metatile = new Metatile;
             int index = i * bytesPerMetatile;
@@ -1717,20 +1738,21 @@ void Project::loadTilesetMetatiles(Tileset* tileset) {
             }
             metatiles.append(metatile);
         }
-        tileset->metatiles = metatiles;
     } else {
-        tileset->metatiles.clear();
-        logError(QString("Could not open tileset metatiles file '%1'").arg(tileset->metatiles_path));
+        metatiles.clear();
+        logError(QString("Could not open tileset metatiles file '%1'").arg(path));
     }
+}
 
-    QFile attrs_file(tileset->metatile_attrs_path);
+void Project::readTilesetMetatileAttrs(QString path, QList<Metatile *>& metatiles) {
+    QFile attrs_file(path);
     if (attrs_file.open(QIODevice::ReadOnly)) {
         QByteArray data = attrs_file.readAll();
-        int num_metatiles = tileset->metatiles.count();
+        int num_metatiles = metatiles.count();
         int attrSize = projectConfig.getMetatileAttributesSize();
         int num_metatileAttrs = data.length() / attrSize;
         if (num_metatiles != num_metatileAttrs) {
-            logWarn(QString("Metatile count %1 does not match metatile attribute count %2 in %3").arg(num_metatiles).arg(num_metatileAttrs).arg(tileset->name));
+            logWarn(QString("Metatile count %1 does not match metatile attribute count %2 in %3").arg(num_metatiles).arg(num_metatileAttrs).arg(path));
             if (num_metatileAttrs > num_metatiles)
                 num_metatileAttrs = num_metatiles;
         }
@@ -1739,11 +1761,23 @@ void Project::loadTilesetMetatiles(Tileset* tileset) {
             uint32_t attributes = 0;
             for (int j = 0; j < attrSize; j++)
                 attributes |= static_cast<unsigned char>(data.at(i * attrSize + j)) << (8 * j);
-            tileset->metatiles.at(i)->setAttributes(attributes);
+            metatiles.at(i)->setAttributes(attributes);
         }
     } else {
-        logError(QString("Could not open tileset metatile attributes file '%1'").arg(tileset->metatile_attrs_path));
+        logError(QString("Could not open tileset metatile attributes file '%1'").arg(path));
     }
+}
+
+void Project::loadTilesetMetatiles(Tileset* tileset) {
+    QList<Metatile *> metatilesList;
+
+    auto path = tileset->metatiles_path;
+    readTilesetMetatiles(path, metatilesList);
+
+    auto attributesPath = tileset->metatile_attrs_path;
+    readTilesetMetatileAttrs(attributesPath, metatilesList);
+
+    tileset->metatiles = metatilesList;
 }
 
 void Project::readMetatilesFromJson(QString path, QList<Metatile*>& metatiles) {
@@ -1927,7 +1961,7 @@ void Project::loadTilesetMetatilesFromJson(Tileset* tileset) {
     readMetatilesFromJson(metatilesPath, metatiles);
 
     auto metatileAttrsPath = tileset->metatile_attrs_path;
-    readMetatilesFromJson(metatileAttrsPath, metatiles);
+    readMetatileAttrsFromJson(metatileAttrsPath, metatiles);
 
     tileset->metatiles = metatiles;
 }
@@ -2565,18 +2599,23 @@ bool Project::readFieldmapMasks() {
 bool Project::importMapDataFromJson() {
     for (auto mapLayout : mapLayouts) {
         QString path = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
+        path = replaceFileExtension(path, "json");
         mapLayout->blockdata = readBlockdataFromJson(path);
 
+        // TODO(@Traeighsea): should this immediately save to bin?
         QString binPath = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
+        binPath = replaceFileExtension(path, "bin");
         writeBlockdata(binPath, mapLayout->blockdata);
     }
 
     for (auto mapLayout : mapLayouts) {
         QString path = QString("%1/%2").arg(root).arg(mapLayout->border_path);
-
+        path = replaceFileExtension(path, "json");
         mapLayout->border = readBlockdataFromJson(path);
 
+        // TODO(@Traeighsea): should this immediately save to bin?
         QString binPath = QString("%1/%2").arg(root).arg(mapLayout->border_path);
+        binPath = replaceFileExtension(path, "bin");
         writeBlockdata(binPath, mapLayout->border);
     }
 
@@ -2587,11 +2626,13 @@ bool Project::exportMapDataAsJson() {
     for (auto mapLayout : mapLayouts) {
         // Export map block data
         QString blockdataPath = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
+        blockdataPath = replaceFileExtension(blockdataPath, "json");
         loadBlockdata(mapLayout);
         writeBlockdataAsJson(blockdataPath, mapLayout->blockdata);
 
         // Export border data
         QString borderPath = QString("%1/%2").arg(root).arg(mapLayout->border_path);
+        borderPath = replaceFileExtension(borderPath, "json");
         loadLayoutBorder(mapLayout);
         writeBlockdataAsJson(borderPath, mapLayout->border);
     }
@@ -2603,11 +2644,13 @@ bool Project::exportMapDataAsBin() {
     for (auto mapLayout : mapLayouts) {
         // Export map block data
         QString blockdataPath = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
+        blockdataPath = replaceFileExtension(blockdataPath, "bin");
         loadBlockdataFromJson(mapLayout);
         writeBlockdata(blockdataPath, mapLayout->blockdata);
 
         // Export border data
         QString borderPath = QString("%1/%2").arg(root).arg(mapLayout->border_path);
+        borderPath = replaceFileExtension(borderPath, "bin");
         loadLayoutBorderFromJson(mapLayout);
         writeBlockdata(borderPath, mapLayout->border);
     }
@@ -2619,7 +2662,17 @@ bool Project::importMetatileDataFromJson() {
     readTilesetLabels();
     for (auto tilesetLabel: tilesetLabelsOrdered) {
         auto tileset = getTileset(tilesetLabel, true);
-        loadTilesetMetatilesFromJson(tileset);
+
+        QList<Metatile *> metatiles;
+        auto path = tileset->metatiles_path;
+        path = replaceFileExtension(path, "json");
+        readMetatilesFromJson(path, metatiles);
+
+        auto attributesPath = tileset->metatile_attrs_path;
+        attributesPath = replaceFileExtension(attributesPath, "json");
+        readMetatileAttrsFromJson(attributesPath, metatiles);
+
+        tileset->metatiles = metatiles;
     }
     return true;
 }
@@ -2628,8 +2681,14 @@ bool Project::exportMetatileDataAsJson() {
     readTilesetLabels();
     for (auto tilesetLabel: tilesetLabelsOrdered) {
         auto tileset = getTileset(tilesetLabel, true);
-        saveTilesetMetatilesAsJson(tileset);
-        saveTilesetMetatileAttributesAsJson(tileset);
+
+        auto path = tileset->metatiles_path;
+        path = replaceFileExtension(path, "json");
+        writeTilesetMetatilesAsJson(path, tileset->metatiles, tileset->is_secondary);
+
+        auto attributesPath = tileset->metatile_attrs_path;
+        attributesPath = replaceFileExtension(attributesPath, "json");
+        writeTilesetMetatileAttributesAsJson(attributesPath, tileset->metatiles, tileset->is_secondary);
     }
     return true;
 }
@@ -2638,8 +2697,14 @@ bool Project::exportMetatileDataAsBin() {
     readTilesetLabels();
     for (auto tilesetLabel: tilesetLabelsOrdered) {
         auto tileset = getTileset(tilesetLabel, true);
-        saveTilesetMetatiles(tileset);
-        saveTilesetMetatileAttributes(tileset);
+
+        auto path = tileset->metatiles_path;
+        path = replaceFileExtension(path, "bin");
+        writeTilesetMetatiles(path, tileset->metatiles);
+
+        auto attributesPath = tileset->metatile_attrs_path;
+        attributesPath = replaceFileExtension(attributesPath, "bin");
+        writeTilesetMetatileAttributes(attributesPath, tileset->metatiles);
     }
     return true;
 }
