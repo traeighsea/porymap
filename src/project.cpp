@@ -36,6 +36,28 @@ int Project::max_map_data_size = 10240; // 0x2800
 int Project::default_map_size = 20;
 int Project::max_object_events = 64;
 
+namespace {
+    template <typename T>
+    std::string intToHex(T num)
+    {
+        std::stringstream stream;
+        stream << "0x" 
+                << std::setfill ('0') << std::setw(sizeof(T)*2) 
+                << std::hex << num;
+        return stream.str();
+    }
+
+    template <typename T>
+    T hexToInt(std::string str)
+    {
+        T retVal;
+        std::stringstream stream;
+        stream << std::hex << str;
+        stream >> retVal;
+        return retVal;
+    }
+}
+
 Project::Project(QWidget *parent) :
     QObject(parent)
 {
@@ -997,7 +1019,41 @@ void Project::saveTilesetMetatileAttributesAsJson(Tileset * tileset) {
     path+= "json";
 
     QFile metatileAttrFile(path);
-    if (metatileAttrFile.open(QIODevice::WriteOnly)) {        
+    if (metatileAttrFile.open(QIODevice::WriteOnly)) {      
+        OrderedJson::object metatilesObj;
+
+        // We want to describe how the data is serialized, which can ignore project wide settings
+        int numMetatiles = tileset->is_secondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
+        if (tileset->metatiles.size() != numMetatiles) {
+            // if there's a differing number of metatiles, we want to ignore the project config setting
+            numMetatiles = tileset->metatiles.size();
+            // TODO(@Traeighsea): Emit a warning
+        }
+        metatilesObj["numMetatiles"] = numMetatiles;
+
+        int metatileAttributeSize = projectConfig.getMetatileAttributesSize() * 8;
+        // TODO(@traeighsea): Add something to retain the attribute sizes and masks for "custom" defined packers
+        metatilesObj["attributeSizeInBits"] = metatileAttributeSize;
+
+        uint32_t behaviorMask = projectConfig.getMetatileBehaviorMask();
+        uint32_t terrainTypeMask = projectConfig.getMetatileTerrainTypeMask();
+        uint32_t encounterTypeMask = projectConfig.getMetatileEncounterTypeMask();
+        uint32_t layerTypeMask = projectConfig.getMetatileLayerTypeMask();
+
+        // Calculate mask of bits not used by standard behaviors so we can preserve this data.
+        uint32_t unusedMask = ~(behaviorMask | terrainTypeMask | encounterTypeMask | layerTypeMask);
+        unusedMask &= Metatile::getMaxAttributesMask();
+
+        OrderedJson::object attributeMasksObj;
+
+        attributeMasksObj["behaviorMask"] = QString::fromStdString(intToHex(behaviorMask));
+        attributeMasksObj["terrainTypeMask"] = QString::fromStdString(intToHex(terrainTypeMask));
+        attributeMasksObj["encounterTypeMask"] = QString::fromStdString(intToHex(encounterTypeMask));
+        attributeMasksObj["layerTypeMask"] = QString::fromStdString(intToHex(layerTypeMask));
+        attributeMasksObj["unusedMask"] = QString::fromStdString(intToHex(unusedMask));
+
+        metatilesObj["attributeMasks"] = attributeMasksObj;
+
         OrderedJson::array metatileAttrArr;
         for (Metatile *metatile : tileset->metatiles) {
             OrderedJson::object metatileAttributeObj;
@@ -1013,7 +1069,6 @@ void Project::saveTilesetMetatileAttributesAsJson(Tileset * tileset) {
 
             metatileAttrArr.push_back(metatileObj);
         }
-        OrderedJson::object metatilesObj;
         metatilesObj["metatileAttributes"] = metatileAttrArr;
 
         OrderedJson metatileAttrsJson(metatilesObj);
@@ -1033,12 +1088,29 @@ void Project::saveTilesetMetatilesAsJson(Tileset *tileset) {
 
     QFile metatilesFile(path);
     if (metatilesFile.open(QIODevice::WriteOnly)) {
-        int numTiles = projectConfig.getNumTilesInMetatile();
+        OrderedJson::object metatilesObj;
+
+        // We want to describe how the data is serialized, which can ignore project wide settings
+        int numMetatiles = tileset->is_secondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
+        if (tileset->metatiles.size() != numMetatiles) {
+            // if there's a differing number of metatiles, we want to ignore the project config setting
+            numMetatiles = tileset->metatiles.size();
+            // TODO(@Traeighsea): Emit a warning
+        }
+        metatilesObj["numMetatiles"] = numMetatiles;
+
+        int numTilesInMetatile = projectConfig.getNumTilesInMetatile();
+        if (tileset->metatiles[0]->tiles.size() != numTilesInMetatile) {
+            // if there's a differing number of tiles, we want to ignore the project config setting
+            numTilesInMetatile = tileset->metatiles[0]->tiles.size();
+            // TODO(@Traeighsea): Emit a warning
+        }
+        metatilesObj["numTilesInMetatile"] = numTilesInMetatile;
         
         OrderedJson::array metatilesArr;
         for (Metatile *metatile : tileset->metatiles) {
             OrderedJson::array tileArr;
-            for (int i = 0; i < numTiles; i++) {
+            for (int i = 0; i < metatile->tiles.size(); i++) {
                 OrderedJson::object tileObj;
                 tileObj["tileId"] = metatile->tiles[i].tileId;
                 tileObj["xflip"] = metatile->tiles[i].xflip;
@@ -1051,7 +1123,6 @@ void Project::saveTilesetMetatilesAsJson(Tileset *tileset) {
 
             metatilesArr.push_back(metatileObj);
         }
-        OrderedJson::object metatilesObj;
         metatilesObj["metatiles"] = metatilesArr;
 
         OrderedJson metatilesJson(metatilesObj);
@@ -1301,8 +1372,16 @@ void Project::writeBlockdataAsJson(QString path, const Blockdata &blockdata) {
         logError(QString("Error: Could not open %1 for writing").arg(path));
         return;
     }
-
     OrderedJson::object mapObj;
+
+    // TODO(@traeighsea): This may be _too_ redundant. Does someone want this as a feature??
+    mapObj["mapgridSizeInBits"] = 16;
+
+    OrderedJson::object mapgridMasksObj;
+    mapgridMasksObj["metatileIdMask"] = QString::fromStdString(intToHex(projectConfig.getBlockMetatileIdMask()));
+    mapgridMasksObj["collisionMask"] = QString::fromStdString(intToHex(projectConfig.getBlockCollisionMask()));
+    mapgridMasksObj["elevationMask"] = QString::fromStdString(intToHex(projectConfig.getBlockElevationMask()));
+    mapObj["mapgridMasks"] = mapgridMasksObj;
 
     OrderedJson::array blocksArr;
     for (auto block : blockdata) {
