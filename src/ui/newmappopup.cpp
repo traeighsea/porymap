@@ -281,8 +281,8 @@ void NewMapPopup::on_pushButton_NewMap_Accept_clicked() {
         layout->tileset_primary_label = this->ui->comboBox_NewMap_Primary_Tileset->currentText();
         layout->tileset_secondary_label = this->ui->comboBox_NewMap_Secondary_Tileset->currentText();
         QString basePath = projectConfig.getFilePath(ProjectFilePath::data_layouts_folders);
-        layout->border_path = QString("%1%2/border.bin").arg(basePath, newMapName);
-        layout->blockdata_path = QString("%1%2/map.bin").arg(basePath, newMapName);
+        layout->border_path = QString("%1%2/border%3").arg(basePath, newMapName, project->getMapDataFileExtension(projectConfig.getLayoutStoreMapDataAsJsonEnabled()));
+        layout->blockdata_path = QString("%1%2/map%3").arg(basePath, newMapName, project->getMapDataFileExtension(projectConfig.getLayoutStoreMapDataAsJsonEnabled()));
     }
 
     if (this->importedMap) {

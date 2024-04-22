@@ -217,6 +217,9 @@ public:
     QString getScriptDefaultString(bool usePoryScript, QString mapName) const;
     QStringList getEventScriptsFilePaths() const;
 
+    static QString getMapDataFileExtension(bool useJson);
+    static QString getMetatilesFileExtension(bool useJson);
+
     QString getDefaultPrimaryTilesetLabel();
     QString getDefaultSecondaryTilesetLabel();
     QString getDynamicMapDefineName();

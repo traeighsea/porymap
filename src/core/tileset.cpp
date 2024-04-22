@@ -310,6 +310,7 @@ bool Tileset::appendToMetatiles(QString root, QString friendlyName, bool usingAs
     }
 
     const QString tilesetDir = this->getExpectedDir();
+    // Note that we still use .bin extension here even if layoutStoreMapDataAsJsonEnabled
     const QString metatilesPath = tilesetDir + "/metatiles.bin";
     const QString metatileAttrsPath = tilesetDir + "/metatile_attributes.bin";
 

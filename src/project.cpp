@@ -1015,8 +1015,6 @@ void Project::saveTilesetMetatiles(Tileset *tileset) {
 
 void Project::saveTilesetMetatileAttributesAsJson(Tileset * tileset) {
     auto path = tileset->metatile_attrs_path;
-    path.erase(path.end()-3, path.end());
-    path+= "json";
 
     QFile metatileAttrFile(path);
     if (metatileAttrFile.open(QIODevice::WriteOnly)) {      
@@ -1083,8 +1081,6 @@ void Project::saveTilesetMetatileAttributesAsJson(Tileset * tileset) {
 
 void Project::saveTilesetMetatilesAsJson(Tileset *tileset) {
     auto path = tileset->metatiles_path;
-    path.erase(path.end()-3, path.end());
-    path+= "json";
 
     QFile metatilesFile(path);
     if (metatilesFile.open(QIODevice::WriteOnly)) {
@@ -1242,8 +1238,6 @@ bool Project::loadBlockdata(MapLayout *layout) {
 bool Project::loadBlockdataFromJson(MapLayout *layout) {
     QString path = QString("%1/%2").arg(root).arg(layout->blockdata_path);
     // TODO(@traeighsea): update to check file extension
-    path.erase(path.end()-3, path.end());
-    path+= "json";
 
     layout->blockdata = readBlockdataFromJson(path);
     layout->lastCommitBlocks.blocks = layout->blockdata;
@@ -1261,6 +1255,7 @@ bool Project::loadBlockdataFromJson(MapLayout *layout) {
 }
 
 void Project::setNewMapBlockdata(Map *map) {
+    // TODO(@traeighsea): Need to add json version of new data
     map->layout->blockdata.clear();
     int width = map->getWidth();
     int height = map->getHeight();
@@ -1291,8 +1286,6 @@ bool Project::loadLayoutBorder(MapLayout *layout) {
 bool Project::loadLayoutBorderFromJson(MapLayout *layout) {
     QString path = QString("%1/%2").arg(root).arg(layout->border_path);
     // TODO(@traeighsea): update to check file extension
-    path.erase(path.end()-3, path.end());
-    path+= "json";
 
     layout->border = readBlockdataFromJson(path);
     layout->lastCommitBlocks.border = layout->border;
@@ -1309,6 +1302,7 @@ bool Project::loadLayoutBorderFromJson(MapLayout *layout) {
 }
 
 void Project::setNewMapBorder(Map *map) {
+    // TODO(@traeighsea): Need to add json version of new data
     map->layout->border.clear();
     int width = map->getBorderWidth();
     int height = map->getBorderHeight();
@@ -1353,15 +1347,11 @@ void Project::writeBlockdata(QString path, const Blockdata &blockdata) {
 
 void Project::saveLayoutBorderAsJson(Map *map) {
     QString path = QString("%1/%2").arg(root).arg(map->layout->border_path);
-    path.erase(path.end()-3, path.end());
-    path+= "json";
     writeBlockdataAsJson(path, map->layout->border);
 }
 
 void Project::saveLayoutBlockdataAsJson(Map* map) {
     QString path = QString("%1/%2").arg(root).arg(map->layout->blockdata_path);
-    path.erase(path.end()-3, path.end());
-    path+= "json";
     writeBlockdataAsJson(path, map->layout->blockdata);
 }
 
@@ -1632,10 +1622,30 @@ void Project::readTilesetPaths(Tileset* tileset) {
 
         if (!tilesImagePath.isEmpty())
             tileset->tilesImagePath = this->fixGraphicPath(rootDir + tilesImagePath);
-        if (!metatilesPath.isEmpty())
-            tileset->metatiles_path = rootDir + metatilesPath;
-        if (!metatileAttrsPath.isEmpty())
-            tileset->metatile_attrs_path = rootDir + metatileAttrsPath;
+        if (!metatilesPath.isEmpty()) {
+            if (projectConfig.getTilesetsStoreMetatileDataAsJson()) {
+                // If we're storing metatile data as json, we want to update the path to use json, 
+                // however we still want to keep the bin file extension in the header file
+                auto updatedPath = metatilesPath;
+                updatedPath.erase(updatedPath.end()-3, updatedPath.end());
+                updatedPath += "json";
+                tileset->metatiles_path = rootDir + updatedPath;
+            } else {
+                tileset->metatiles_path = rootDir + metatilesPath;
+            }
+        }
+        if (!metatileAttrsPath.isEmpty()) {
+            if (projectConfig.getTilesetsStoreMetatileDataAsJson()) {
+                // If we're storing metatile data as json, we want to update the path to use json, 
+                // however we still want to keep the bin file extension in the header file
+                auto updatedPath = metatilesPath;
+                updatedPath.erase(updatedPath.end()-3, updatedPath.end());
+                updatedPath += "json";
+                tileset->metatile_attrs_path = rootDir + updatedPath;
+            } else {
+                tileset->metatile_attrs_path = rootDir + metatileAttrsPath;
+            }
+        }
         for (const auto &path : palettePaths)
             tileset->palettePaths.append(this->fixPalettePath(rootDir + path));
     }
@@ -1645,9 +1655,9 @@ void Project::readTilesetPaths(Tileset* tileset) {
     if (tileset->tilesImagePath.isEmpty())
         tileset->tilesImagePath = defaultPath + "/tiles.png";
     if (tileset->metatiles_path.isEmpty())
-        tileset->metatiles_path = defaultPath + "/metatiles.bin";
+        tileset->metatiles_path = defaultPath + "/metatiles" + this->getMetatilesFileExtension(projectConfig.getTilesetsStoreMetatileDataAsJson());
     if (tileset->metatile_attrs_path.isEmpty())
-        tileset->metatile_attrs_path = defaultPath + "/metatile_attributes.bin";
+        tileset->metatile_attrs_path = defaultPath + "/metatile_attributes" + this->getMetatilesFileExtension(projectConfig.getTilesetsStoreMetatileDataAsJson());
     if (tileset->palettePaths.isEmpty()) {
         QString palettes_dir_path = defaultPath + "/palettes/";
         for (int i = 0; i < 16; i++) {
@@ -1914,13 +1924,9 @@ void Project::loadTilesetMetatilesFromJson(Tileset* tileset) {
     QList<Metatile*> metatiles;
 
     auto metatilesPath = tileset->metatiles_path;
-    metatilesPath.erase(metatilesPath.end()-3, metatilesPath.end());
-    metatilesPath+= "json";
     readMetatilesFromJson(metatilesPath, metatiles);
 
     auto metatileAttrsPath = tileset->metatile_attrs_path;
-    metatileAttrsPath.erase(metatileAttrsPath.end()-3, metatileAttrsPath.end());
-    metatileAttrsPath+= "json";
     readMetatilesFromJson(metatileAttrsPath, metatiles);
 
     tileset->metatiles = metatiles;
@@ -2559,9 +2565,6 @@ bool Project::readFieldmapMasks() {
 bool Project::importMapDataFromJson() {
     for (auto mapLayout : mapLayouts) {
         QString path = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
-        path.erase(path.end()-3, path.end());
-        path+= "json";
-
         mapLayout->blockdata = readBlockdataFromJson(path);
 
         QString binPath = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
@@ -2570,8 +2573,6 @@ bool Project::importMapDataFromJson() {
 
     for (auto mapLayout : mapLayouts) {
         QString path = QString("%1/%2").arg(root).arg(mapLayout->border_path);
-        path.erase(path.end()-3, path.end());
-        path+= "json";
 
         mapLayout->border = readBlockdataFromJson(path);
 
@@ -2584,25 +2585,15 @@ bool Project::importMapDataFromJson() {
 
 bool Project::exportMapDataAsJson() {
     for (auto mapLayout : mapLayouts) {
-        { // Export map block data
-            QString path = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
-            // Update the path from bin to json
-            path.erase(path.end()-3, path.end());
-            path+= "json";
+        // Export map block data
+        QString blockdataPath = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
+        loadBlockdata(mapLayout);
+        writeBlockdataAsJson(blockdataPath, mapLayout->blockdata);
 
-            loadBlockdata(mapLayout);
-            writeBlockdataAsJson(path, mapLayout->blockdata);
-        }
-
-        { // Export border data
-            QString path = QString("%1/%2").arg(root).arg(mapLayout->border_path);
-            // Update the path from bin to json
-            path.erase(path.end()-3, path.end());
-            path+= "json";
-
-            loadLayoutBorder(mapLayout);
-            writeBlockdataAsJson(path, mapLayout->border);
-        }
+        // Export border data
+        QString borderPath = QString("%1/%2").arg(root).arg(mapLayout->border_path);
+        loadLayoutBorder(mapLayout);
+        writeBlockdataAsJson(borderPath, mapLayout->border);
     }
 
     return true;
@@ -3057,6 +3048,22 @@ QStringList Project::getEventScriptsFilePaths() const {
         filePaths << it_inc_maps.next();
 
     return filePaths;
+}
+
+QString Project::getMapDataFileExtension(bool useJson) {
+    if(useJson) {
+        return ".json";
+    } else {
+        return ".bin";
+    }
+}
+
+QString Project::getMetatilesFileExtension(bool useJson) {
+    if(useJson) {
+        return ".json";
+    } else {
+        return ".bin";
+    }
 }
 
 void Project::setEventPixmap(Event *event, bool forceLoad) {

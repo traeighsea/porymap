@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "config.h"
 #include "ui_mainwindow.h"
 #include "aboutporymap.h"
 #include "project.h"
@@ -1347,8 +1348,8 @@ void MainWindow::on_actionNew_Tileset_triggered() {
         Tileset newSet;
         newSet.name = createTilesetDialog->fullSymbolName;
         newSet.tilesImagePath = fullDirectoryPath + "/tiles.png";
-        newSet.metatiles_path = fullDirectoryPath + "/metatiles.bin";
-        newSet.metatile_attrs_path = fullDirectoryPath + "/metatile_attributes.bin";
+        newSet.metatiles_path = fullDirectoryPath + "/metatiles" + editor->project->getMetatilesFileExtension(projectConfig.getTilesetsStoreMetatileDataAsJson());
+        newSet.metatile_attrs_path = fullDirectoryPath + "/metatile_attributes" + editor->project->getMetatilesFileExtension(projectConfig.getTilesetsStoreMetatileDataAsJson());
         newSet.is_secondary = createTilesetDialog->isSecondary;
         int numMetatiles = createTilesetDialog->isSecondary ? (Project::getNumMetatilesTotal() - Project::getNumMetatilesPrimary()) : Project::getNumMetatilesPrimary();
         QImage tilesImage(":/images/blank_tileset.png");
