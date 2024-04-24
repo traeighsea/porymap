@@ -8,8 +8,7 @@ namespace {
    "terrainType",
    "encounterType",
    "layerType",
-   "unused",
-   "unlabeled"
+   "unused"
    };
 }
 
@@ -31,11 +30,25 @@ static const QMap<Metatile::Attr, BitPacker> attributePackersRSE = {
 static QMap<Metatile::Attr, BitPacker> attributePackers;
 
 const char* Metatile::AttrEnumToString(const Attr& attribute) {
-   if (attribute > Attr::Unused) {
-      return AttrString[5] + attribute;
-   }
+    if (attribute > Attr::Unused) {
+        return AttrString[4];
+    }
 
-   return AttrString[attribute];
+    return AttrString[attribute];
+}
+
+Metatile::Attr Metatile::StringToAttrEnum(std::string str) {
+    if (str == "behavior") {
+        return Metatile::Attr::Behavior;
+    } else if (str == "terrainType") {
+        return Metatile::Attr::TerrainType;
+    } else if (str == "encounterType") {
+        return Metatile::Attr::EncounterType;
+    } else if (str == "layerType") {
+        return Metatile::Attr::LayerType;
+    } else { // unused
+        return Metatile::Attr::Unused;
+    }
 }
 
 Metatile::Metatile(const int numTiles) {

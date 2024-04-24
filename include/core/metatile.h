@@ -49,6 +49,7 @@ public:
         Unused, // Preserve bits not used by the other attributes
     };
     static const char* AttrEnumToString(const Attr& attribute);
+    static Metatile::Attr StringToAttrEnum(std::string str);
 
 public:
     QList<Tile> tiles;

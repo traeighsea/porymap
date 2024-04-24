@@ -37,14 +37,23 @@ int Project::default_map_size = 20;
 int Project::max_object_events = 64;
 
 namespace {
+
+    // Careful not to send this into the json!
     template <typename T>
-    std::string intToHex(T num)
+    std::string intToHexStd(T num)
     {
         std::stringstream stream;
         stream << "0x" 
                 << std::setfill ('0') << std::setw(sizeof(T)*2) 
                 << std::hex << num;
         return stream.str();
+    }
+
+    // Usually the conversion you want, since we use QStrings often
+    template <typename T>
+    QString intToHex(T num)
+    {
+        return QString::fromStdString(intToHexStd<T>(num));
     }
 
     template <typename T>
@@ -55,6 +64,13 @@ namespace {
         stream << std::hex << str;
         stream >> retVal;
         return retVal;
+    }
+
+    template <typename T>
+    T hexToInt(QString str)
+    {
+        std::string stdStr = str.toStdString();
+        return hexToInt<T>(stdStr);
     }
 
     std::string replaceFileExtension(const std::string& path, const std::string& extension) {
@@ -1035,7 +1051,7 @@ void Project::writeTilesetMetatileAttributes(QString path, const QList<Metatile 
 
 void Project::saveTilesetMetatileAttributesAsJson(Tileset * tileset) {
     auto path = tileset->metatile_attrs_path;
-    writeTilesetMetatileAttributesAsJson(path, tileset->metatiles, tileset->is_secondary);
+    writeTilesetMetatileAttributesAsJson(path, tileset->metatiles, tileset->is_secondary, tileset->metatileAttrBitMasks);
 }
 
 void Project::saveTilesetMetatilesAsJson(Tileset *tileset) {
@@ -1092,7 +1108,7 @@ void Project::writeTilesetMetatilesAsJson(QString path, const QList<Metatile *>&
     }
 }
 
-void Project::writeTilesetMetatileAttributesAsJson(QString path, const QList<Metatile *>& metatiles, bool isSecondary) {
+void Project::writeTilesetMetatileAttributesAsJson(QString path, const QList<Metatile *>& metatiles, bool isSecondary, std::optional<QMap<QString, uint32_t>>& metatileAttrBitMasks) {
     QFile metatileAttrFile(path);
     if (metatileAttrFile.open(QIODevice::WriteOnly)) {      
         OrderedJson::object metatilesObj;
@@ -1110,22 +1126,27 @@ void Project::writeTilesetMetatileAttributesAsJson(QString path, const QList<Met
         // TODO(@traeighsea): Add something to retain the attribute sizes and masks for "custom" defined packers
         metatilesObj["attributeSizeInBits"] = metatileAttributeSize;
 
-        uint32_t behaviorMask = projectConfig.getMetatileBehaviorMask();
-        uint32_t terrainTypeMask = projectConfig.getMetatileTerrainTypeMask();
-        uint32_t encounterTypeMask = projectConfig.getMetatileEncounterTypeMask();
-        uint32_t layerTypeMask = projectConfig.getMetatileLayerTypeMask();
-
-        // Calculate mask of bits not used by standard behaviors so we can preserve this data.
-        uint32_t unusedMask = ~(behaviorMask | terrainTypeMask | encounterTypeMask | layerTypeMask);
-        unusedMask &= Metatile::getMaxAttributesMask();
-
         OrderedJson::object attributeMasksObj;
 
-        attributeMasksObj["behaviorMask"] = QString::fromStdString(intToHex(behaviorMask));
-        attributeMasksObj["terrainTypeMask"] = QString::fromStdString(intToHex(terrainTypeMask));
-        attributeMasksObj["encounterTypeMask"] = QString::fromStdString(intToHex(encounterTypeMask));
-        attributeMasksObj["layerTypeMask"] = QString::fromStdString(intToHex(layerTypeMask));
-        attributeMasksObj["unusedMask"] = QString::fromStdString(intToHex(unusedMask));
+        if (metatileAttrBitMasks) { 
+            for (auto& key: metatileAttrBitMasks->keys()){
+                attributeMasksObj[key] = intToHex(metatileAttrBitMasks->value(key));
+            }
+        } else {
+            uint32_t behaviorMask = projectConfig.getMetatileBehaviorMask();
+            uint32_t terrainTypeMask = projectConfig.getMetatileTerrainTypeMask();
+            uint32_t encounterTypeMask = projectConfig.getMetatileEncounterTypeMask();
+            uint32_t layerTypeMask = projectConfig.getMetatileLayerTypeMask();
+            // Calculate mask of bits not used by standard behaviors so we can preserve this data.
+            uint32_t unusedMask = ~(behaviorMask | terrainTypeMask | encounterTypeMask | layerTypeMask);
+            unusedMask &= Metatile::getMaxAttributesMask();
+
+            attributeMasksObj["behaviorMask"] = intToHex(behaviorMask);
+            attributeMasksObj["terrainTypeMask"] = intToHex(terrainTypeMask);
+            attributeMasksObj["encounterTypeMask"] = intToHex(encounterTypeMask);
+            attributeMasksObj["layerTypeMask"] = intToHex(layerTypeMask);
+            attributeMasksObj["unusedMask"] = intToHex(unusedMask);
+        }
 
         metatilesObj["attributeMasks"] = attributeMasksObj;
 
@@ -1136,7 +1157,6 @@ void Project::writeTilesetMetatileAttributesAsJson(QString path, const QList<Met
             auto keys = attributeMap.keys();
             for (auto attribute: keys) {
                 auto key = Metatile::AttrEnumToString(attribute);
-
                 metatileAttributeObj[key] = static_cast<int>(attributeMap[attribute]);
             }
             OrderedJson::object metatileObj;
@@ -1277,7 +1297,6 @@ bool Project::loadBlockdataFromJson(MapLayout *layout) {
 }
 
 void Project::setNewMapBlockdata(Map *map) {
-    // TODO(@traeighsea): Need to add json version of new data
     map->layout->blockdata.clear();
     int width = map->getWidth();
     int height = map->getHeight();
@@ -1324,7 +1343,6 @@ bool Project::loadLayoutBorderFromJson(MapLayout *layout) {
 }
 
 void Project::setNewMapBorder(Map *map) {
-    // TODO(@traeighsea): Need to add json version of new data
     map->layout->border.clear();
     int width = map->getBorderWidth();
     int height = map->getBorderHeight();
@@ -1390,9 +1408,9 @@ void Project::writeBlockdataAsJson(QString path, const Blockdata &blockdata) {
     mapObj["mapgridSizeInBits"] = 16;
 
     OrderedJson::object mapgridMasksObj;
-    mapgridMasksObj["metatileIdMask"] = QString::fromStdString(intToHex(projectConfig.getBlockMetatileIdMask()));
-    mapgridMasksObj["collisionMask"] = QString::fromStdString(intToHex(projectConfig.getBlockCollisionMask()));
-    mapgridMasksObj["elevationMask"] = QString::fromStdString(intToHex(projectConfig.getBlockElevationMask()));
+    mapgridMasksObj["metatileIdMask"] = intToHex(projectConfig.getBlockMetatileIdMask());
+    mapgridMasksObj["collisionMask"] = intToHex(projectConfig.getBlockCollisionMask());
+    mapgridMasksObj["elevationMask"] = intToHex(projectConfig.getBlockElevationMask());
     mapObj["mapgridMasks"] = mapgridMasksObj;
 
     OrderedJson::array blocksArr;
@@ -1793,8 +1811,6 @@ void Project::readMetatilesFromJson(QString path, QList<Metatile*>& metatiles) {
         return;
     }
 
-    // TODO(@Traeighsea): Add a field to the json to describe double vs tripple tiled, read it here
-
     QJsonObject metatilesObj = metatilesDoc.object();
     QJsonArray metatilesArr = metatilesObj["metatiles"].toArray();
     if (metatilesArr.size() == 0) {
@@ -1879,7 +1895,7 @@ void Project::readMetatilesFromJson(QString path, QList<Metatile*>& metatiles) {
     }
 }
 
-void Project::readMetatileAttrsFromJson(QString path, QList<Metatile*>& metatiles) {
+void Project::readMetatileAttributesFromJson(QString path, QList<Metatile*>& metatiles,  std::optional<QMap<QString, uint32_t>>& metatileAttrBitMasks) {
     if (metatiles.empty()) {
         logError(QString("Expected metatile list to not be empty at %1").arg(path));
         return;
@@ -1891,10 +1907,25 @@ void Project::readMetatileAttrsFromJson(QString path, QList<Metatile*>& metatile
         logError(QString("Failed to read metatiles from %1").arg(path));
         return;
     }
-
-    // TODO(@Traeighsea): Add a field to the json to describe how vars are packed, read it here
-
     QJsonObject metatilesObj = metatileAttrDoc.object();
+
+    // TODO(@Traeighsea): Adding a max metatiles var to tilesets could be useful in having non global tilesets
+    // auto maxNumMetatiles = metatilesObj["maxNumMetatiles"].toInt();
+
+    //auto numMetatiles = metatilesObj["numMetatiles"].toInt();
+    //auto attributeSizeInBits = metatilesObj["attributeSizeInBits"].toInt();
+
+    QJsonObject attributeMasksObj = metatilesObj["attributeMasks"].toObject();
+
+    metatileAttrBitMasks = QMap<QString, uint32_t>();
+    // Loop through all the attribute masks
+    // Allow arbitrarily named keys and set them accordingly
+    for (auto key: attributeMasksObj.keys()){
+        auto str = attributeMasksObj[key].toString();
+        uint32_t bitmask = hexToInt<uint32_t>(str);
+        metatileAttrBitMasks->insert(key, bitmask);
+    }
+
     QJsonArray metatileAttrArr = metatilesObj["metatileAttributes"].toArray();
     if (metatileAttrArr.size() == 0) {
         logError(QString("'metatileAttributes' array is missing from %1.").arg(path));
@@ -1926,29 +1957,24 @@ void Project::readMetatileAttrsFromJson(QString path, QList<Metatile*>& metatile
             return;
         }
 
-        bool succeeded{true};
-
         // Loop through all the attributes
         // Allow arbitrarily named keys and set them accordingly
         for (auto key: attrObj.keys()){
-            if (key == "behavior") {
-                auto attr = static_cast<uint16_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
-                metatiles.at(i)->setAttribute(Metatile::Attr::Behavior, attr);
-            } else if (key == "terrainType") {
-                auto attr = static_cast<uint16_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
-                metatiles.at(i)->setAttribute(Metatile::Attr::TerrainType, attr);
-            } else if (key == "encounterType") {
-                auto attr = static_cast<uint16_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
-                metatiles.at(i)->setAttribute(Metatile::Attr::EncounterType, attr);
-            } else if (key == "layerType") {
-                auto attr = static_cast<uint16_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
-                metatiles.at(i)->setAttribute(Metatile::Attr::LayerType, attr);
-            } else if (key == "unused") {
-                auto attr = static_cast<uint16_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
-                metatiles.at(i)->setAttribute(Metatile::Attr::Unused, attr);
+            bool succeeded{true};
+            auto attrVal = static_cast<uint32_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
+            if (!succeeded) {
+                logError(QString("Issue parsing metatile attribute %1 index %2 in %3.").arg(key).arg(i).arg(path));
+                continue;
+            }
+            Metatile::Attr attr = Metatile::StringToAttrEnum(key.toStdString());
+            // TODO(@traeighsea): Should we check their value is within the declared mask range and log a warning?
+
+            // Special case unused because we wanna preserve the data
+            if (key == "unused") {
+                auto unusedVal = metatiles.at(i)->getAttribute(Metatile::Attr::Unused);
+                metatiles.at(i)->setAttribute(attr, attrVal | unusedVal);
             } else {
-                // TODO(@traeighsea): Custom attributes
-                logError(QString("Unknown metatile attribute field for metatile %1 in %2").arg(i).arg(path));
+                metatiles.at(i)->setAttribute(attr, attrVal);
             }
         }
     }
@@ -1961,7 +1987,7 @@ void Project::loadTilesetMetatilesFromJson(Tileset* tileset) {
     readMetatilesFromJson(metatilesPath, metatiles);
 
     auto metatileAttrsPath = tileset->metatile_attrs_path;
-    readMetatileAttrsFromJson(metatileAttrsPath, metatiles);
+    readMetatileAttributesFromJson(metatileAttrsPath, metatiles, tileset->metatileAttrBitMasks);
 
     tileset->metatiles = metatiles;
 }
@@ -2602,21 +2628,9 @@ bool Project::importMapDataFromJson() {
         path = replaceFileExtension(path, "json");
         mapLayout->blockdata = readBlockdataFromJson(path);
 
-        // TODO(@Traeighsea): should this immediately save to bin?
-        QString binPath = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
-        binPath = replaceFileExtension(path, "bin");
-        writeBlockdata(binPath, mapLayout->blockdata);
-    }
-
-    for (auto mapLayout : mapLayouts) {
-        QString path = QString("%1/%2").arg(root).arg(mapLayout->border_path);
-        path = replaceFileExtension(path, "json");
-        mapLayout->border = readBlockdataFromJson(path);
-
-        // TODO(@Traeighsea): should this immediately save to bin?
-        QString binPath = QString("%1/%2").arg(root).arg(mapLayout->border_path);
-        binPath = replaceFileExtension(path, "bin");
-        writeBlockdata(binPath, mapLayout->border);
+        QString borderPath = QString("%1/%2").arg(root).arg(mapLayout->border_path);
+        borderPath = replaceFileExtension(borderPath, "json");
+        mapLayout->border = readBlockdataFromJson(borderPath);
     }
 
     return true;
@@ -2624,16 +2638,16 @@ bool Project::importMapDataFromJson() {
 
 bool Project::exportMapDataAsJson() {
     for (auto mapLayout : mapLayouts) {
+        loadLayout(mapLayout);
+        
         // Export map block data
         QString blockdataPath = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
         blockdataPath = replaceFileExtension(blockdataPath, "json");
-        loadBlockdata(mapLayout);
         writeBlockdataAsJson(blockdataPath, mapLayout->blockdata);
 
         // Export border data
         QString borderPath = QString("%1/%2").arg(root).arg(mapLayout->border_path);
         borderPath = replaceFileExtension(borderPath, "json");
-        loadLayoutBorder(mapLayout);
         writeBlockdataAsJson(borderPath, mapLayout->border);
     }
 
@@ -2642,16 +2656,16 @@ bool Project::exportMapDataAsJson() {
 
 bool Project::exportMapDataAsBin() {
     for (auto mapLayout : mapLayouts) {
+        loadLayout(mapLayout);
+
         // Export map block data
         QString blockdataPath = QString("%1/%2").arg(root).arg(mapLayout->blockdata_path);
         blockdataPath = replaceFileExtension(blockdataPath, "bin");
-        loadBlockdataFromJson(mapLayout);
         writeBlockdata(blockdataPath, mapLayout->blockdata);
 
         // Export border data
         QString borderPath = QString("%1/%2").arg(root).arg(mapLayout->border_path);
         borderPath = replaceFileExtension(borderPath, "bin");
-        loadLayoutBorderFromJson(mapLayout);
         writeBlockdata(borderPath, mapLayout->border);
     }
 
@@ -2664,13 +2678,13 @@ bool Project::importMetatileDataFromJson() {
         auto tileset = getTileset(tilesetLabel, true);
 
         QList<Metatile *> metatiles;
-        auto path = tileset->metatiles_path;
-        path = replaceFileExtension(path, "json");
-        readMetatilesFromJson(path, metatiles);
+        auto metatilesPath = tileset->metatiles_path;
+        metatilesPath = replaceFileExtension(metatilesPath, "json");
+        readMetatilesFromJson(metatilesPath, metatiles);
 
         auto attributesPath = tileset->metatile_attrs_path;
         attributesPath = replaceFileExtension(attributesPath, "json");
-        readMetatileAttrsFromJson(attributesPath, metatiles);
+        readMetatileAttributesFromJson(attributesPath, metatiles, tileset->metatileAttrBitMasks);
 
         tileset->metatiles = metatiles;
     }
@@ -2682,13 +2696,13 @@ bool Project::exportMetatileDataAsJson() {
     for (auto tilesetLabel: tilesetLabelsOrdered) {
         auto tileset = getTileset(tilesetLabel, true);
 
-        auto path = tileset->metatiles_path;
-        path = replaceFileExtension(path, "json");
-        writeTilesetMetatilesAsJson(path, tileset->metatiles, tileset->is_secondary);
+        auto metatilesPath = tileset->metatiles_path;
+        metatilesPath = replaceFileExtension(metatilesPath, "json");
+        writeTilesetMetatilesAsJson(metatilesPath, tileset->metatiles, tileset->is_secondary);
 
         auto attributesPath = tileset->metatile_attrs_path;
         attributesPath = replaceFileExtension(attributesPath, "json");
-        writeTilesetMetatileAttributesAsJson(attributesPath, tileset->metatiles, tileset->is_secondary);
+        writeTilesetMetatileAttributesAsJson(attributesPath, tileset->metatiles, tileset->is_secondary, tileset->metatileAttrBitMasks);
     }
     return true;
 }

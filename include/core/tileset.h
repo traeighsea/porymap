@@ -32,6 +32,11 @@ public:
     QImage tilesImage;
     QStringList palettePaths;
 
+    // Used in conjunction when enabling json with metatiles because it can allow us to know how to
+    // pack and unpack the binary in the case of multiple metatile packing formats in a single project.
+    // When using this member, it will ignore the project settings for how to pack attr bits
+    std::optional<QMap<QString, uint32_t>> metatileAttrBitMasks{};
+
     QList<QImage> tiles;
     QList<Metatile*> metatiles;
     QHash<int, QString> metatileLabels;
