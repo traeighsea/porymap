@@ -1933,29 +1933,13 @@ void Project::readMetatileAttributesFromJson(QString path, QList<Metatile*>& met
         return;
     }
 
-    QList<QString> requiredFields = QList<QString>{
-        "attributes",
-    };
-
     for (int i = 0; i < metatileAttrArr.size(); i++) {
         QJsonObject metatileAttrObj = metatileAttrArr[i].toObject();
         if (metatileAttrObj.isEmpty())
+            // TODO(@Traeighsea): Log an error
             continue;
-        if (!parser.ensureFieldsExist(metatileAttrObj, requiredFields)) {
-            logError(QString("Metatile attribute %1 is missing field(s) in %2.").arg(i).arg(path));
-            return;
-        }
 
-        QList<QString> metatileAttributesRequiredFields = QList<QString>{
-            "behavior",
-            "layerType"
-        };
-
-        QJsonObject attrObj = metatilesObj["attributes"].toObject();
-        if (!parser.ensureFieldsExist(attrObj, metatileAttributesRequiredFields)) {
-            logError(QString("Metatile attribute %1 is missing field(s) in %2.").arg(i).arg(path));
-            return;
-        }
+        QJsonObject attrObj = metatileAttrObj["attributes"].toObject();
 
         // Loop through all the attributes
         // Allow arbitrarily named keys and set them accordingly

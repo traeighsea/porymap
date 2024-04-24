@@ -23,7 +23,8 @@ Tileset::Tileset(const Tileset &other)
       metatileLabels(other.metatileLabels),
       palettes(other.palettes),
       palettePreviews(other.palettePreviews),
-      hasUnsavedTilesImage(false)
+      hasUnsavedTilesImage(false),
+      metatileAttrBitMasks(other.metatileAttrBitMasks)
 {
     for (auto tile : other.tiles) {
         tiles.append(tile.copy());
@@ -59,6 +60,8 @@ Tileset &Tileset::operator=(const Tileset &other) {
     for (auto *metatile : other.metatiles) {
         metatiles.append(new Metatile(*metatile));
     }
+
+    metatileAttrBitMasks = other.metatileAttrBitMasks;
 
     return *this;
 }
