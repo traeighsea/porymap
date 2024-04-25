@@ -1667,8 +1667,7 @@ void Project::readTilesetPaths(Tileset* tileset) {
                 // If we're storing metatile data as json, we want to update the path to use json, 
                 // however we still want to keep the bin file extension in the header file
                 auto updatedPath = metatilesPath;
-                updatedPath.erase(updatedPath.end()-3, updatedPath.end());
-                updatedPath += "json";
+                replaceFileExtension(updatedPath, "json");
                 tileset->metatiles_path = rootDir + updatedPath;
             } else {
                 tileset->metatiles_path = rootDir + metatilesPath;
@@ -1679,8 +1678,7 @@ void Project::readTilesetPaths(Tileset* tileset) {
                 // If we're storing metatile data as json, we want to update the path to use json, 
                 // however we still want to keep the bin file extension in the header file
                 auto updatedPath = metatileAttrsPath;
-                updatedPath.erase(updatedPath.end()-3, updatedPath.end());
-                updatedPath += "json";
+                replaceFileExtension(updatedPath, "json");
                 tileset->metatile_attrs_path = rootDir + updatedPath;
             } else {
                 tileset->metatile_attrs_path = rootDir + metatileAttrsPath;
