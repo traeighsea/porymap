@@ -2,16 +2,6 @@
 #include "tileset.h"
 #include "project.h"
 
-namespace {
-   const char* AttrString[] = {
-   "behavior",
-   "terrainType",
-   "encounterType",
-   "layerType",
-   "unused"
-   };
-}
-
 // Stores how each attribute should be laid out for all metatiles, according to the vanilla games.
 // Used to set default config values and import maps with AdvanceMap.
 static const QMap<Metatile::Attr, BitPacker> attributePackersFRLG = {
@@ -29,34 +19,37 @@ static const QMap<Metatile::Attr, BitPacker> attributePackersRSE = {
 
 static QMap<Metatile::Attr, BitPacker> attributePackers;
 
-const char* Metatile::AttrEnumToString(const Attr& attribute) {
+const char* Metatile::AttrEnumToStr(const Attr& attribute) {
     if (attribute > Attr::Unused) {
-        return AttrString[4];
+        return AttrConsts::OrderedAttrStrings[4];
     }
 
-    return AttrString[attribute];
+    return AttrConsts::OrderedAttrStrings[attribute];
 }
 
 Metatile::Attr Metatile::StringToAttrEnum(std::string str) {
-    if (str == "behavior") {
+    if (str == AttrConsts::BehaviorStr) {
         return Metatile::Attr::Behavior;
-    } else if (str == "terrainType") {
+    } else if (str == AttrConsts::TerrainTypeStr) {
         return Metatile::Attr::TerrainType;
-    } else if (str == "encounterType") {
+    } else if (str == AttrConsts::EncounterTypeStr) {
         return Metatile::Attr::EncounterType;
-    } else if (str == "layerType") {
+    } else if (str == AttrConsts::LayerTypeStr) {
         return Metatile::Attr::LayerType;
     } else { // unused
         return Metatile::Attr::Unused;
     }
 }
 
-Metatile::Metatile(const int numTiles) {
-    Tile tile = Tile();
-    for (int i = 0; i < numTiles; i++) {
-        this->tiles.append(tile);
-    }
+Metatile::Attr Metatile::StringToAttrEnum(QString str) {
+    return StringToAttrEnum(str.toStdString());
 }
+
+Metatile::Metatile(const int numTiles) : tiles(numTiles, Tile()) {}
+
+Metatile::Metatile(const int numTiles, std::shared_ptr<QMap<QString, BitPacker>> attrPacker) : 
+                   tiles(numTiles, Tile()), 
+                   customBitPacker(attrPacker) {}
 
 int Metatile::getIndexInTileset(int metatileId) {
     if (metatileId < Project::getNumMetatilesPrimary()) {
@@ -87,38 +80,66 @@ QString Metatile::getMetatileIdStrings(const QList<uint16_t> metatileIds) {
 // Read and pack together this metatile's attributes.
 uint32_t Metatile::getAttributes() const {
     uint32_t data = 0;
-    for (auto i = this->attributes.cbegin(), end = this->attributes.cend(); i != end; i++){
-        const auto packer = attributePackers.value(i.key());
+    for (auto i = attributes.cbegin(), end = attributes.cend(); i != end; i++){
+        const auto packer = customBitPacker ? customBitPacker->value(i.key()) : attributePackers.value(StringToAttrEnum(i.key()));
         data |= packer.pack(i.value());
     }
     return data;
 }
 
-const QMap<Metatile::Attr, uint32_t>& Metatile::getAttributesMap() const {
-   return attributes;
+uint32_t Metatile::getAttribute(Metatile::Attr attr) const { 
+    return attributes.value(AttrEnumToStr(attr), 0);
+}
+
+uint32_t Metatile::getAttribute(QString attribute) const {
+    return attributes.value(attribute, 0);
+}
+
+const QList<QString> Metatile::getAttributeKeys() const {
+   return attributes.keys();
 }
 
 // Unpack and insert metatile attributes from the given data.
 void Metatile::setAttributes(uint32_t data) {
-    for (auto i = attributePackers.cbegin(), end = attributePackers.cend(); i != end; i++){
-        const auto packer = i.value();
-        this->setAttribute(i.key(), packer.unpack(data));
+    if (customBitPacker) {
+        for (auto i = customBitPacker->cbegin(), end = customBitPacker->cend(); i != end; i++){
+            const auto packer = i.value();
+            setAttribute(i.key(), packer.unpack(data));
+        }
+    } else {
+        for (auto i = attributePackers.cbegin(), end = attributePackers.cend(); i != end; i++){
+            const auto packer = i.value();
+            setAttribute(i.key(), packer.unpack(data));
+        }
     }
 }
 
 // Unpack and insert metatile attributes from the given data using a vanilla layout. For AdvanceMap import
 void Metatile::setAttributes(uint32_t data, BaseGameVersion version) {
-    const auto vanillaPackers = (version == BaseGameVersion::pokefirered) ? attributePackersFRLG : attributePackersRSE;
-    for (auto i = vanillaPackers.cbegin(), end = vanillaPackers.cend(); i != end; i++){
-        const auto packer = i.value();
-        this->setAttribute(i.key(), packer.unpack(data));
+    if (customBitPacker) {
+        for (auto i = customBitPacker->cbegin(), end = customBitPacker->cend(); i != end; i++){
+            const auto packer = i.value();
+            setAttribute(i.key(), packer.unpack(data));
+        }
+    } else {
+        const auto vanillaPackers = (version == BaseGameVersion::pokefirered) ? attributePackersFRLG : attributePackersRSE;
+        for (auto i = vanillaPackers.cbegin(), end = vanillaPackers.cend(); i != end; i++){
+            const auto packer = i.value();
+            setAttribute(i.key(), packer.unpack(data));
+        }
     }
 }
 
 // Set the value for a metatile attribute, and fit it within the valid value range.
 void Metatile::setAttribute(Metatile::Attr attr, uint32_t value) {
-    const auto packer = attributePackers.value(attr);
-    this->attributes.insert(attr, packer.clamp(value));
+    const auto packer = customBitPacker ? customBitPacker->value(AttrEnumToStr(attr)) : attributePackers.value(attr);
+    attributes.insert(AttrEnumToStr(attr), packer.clamp(value));
+}
+
+void Metatile::setAttribute(QString attribute, uint32_t value) {
+    const auto packer = customBitPacker ? customBitPacker->value(attribute) : attributePackers.value(StringToAttrEnum(attribute));
+    attributes.insert(attribute, packer.clamp(value));
+
 }
 
 int Metatile::getDefaultAttributesSize(BaseGameVersion version) {

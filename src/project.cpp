@@ -2,6 +2,7 @@
 #include "config.h"
 #include "history.h"
 #include "log.h"
+#include "metatile.h"
 #include "parseutil.h"
 #include "paletteutil.h"
 #include "tile.h"
@@ -1128,7 +1129,7 @@ void Project::writeTilesetMetatileAttributesAsJson(QString path, const QList<Met
 
         OrderedJson::object attributeMasksObj;
 
-        if (metatileAttrBitMasks) { 
+        if (metatileAttrBitMasks) {
             for (auto& key: metatileAttrBitMasks->keys()){
                 attributeMasksObj[key] = intToHex(metatileAttrBitMasks->value(key));
             }
@@ -1141,11 +1142,11 @@ void Project::writeTilesetMetatileAttributesAsJson(QString path, const QList<Met
             uint32_t unusedMask = ~(behaviorMask | terrainTypeMask | encounterTypeMask | layerTypeMask);
             unusedMask &= Metatile::getMaxAttributesMask();
 
-            attributeMasksObj["behaviorMask"] = intToHex(behaviorMask);
-            attributeMasksObj["terrainTypeMask"] = intToHex(terrainTypeMask);
-            attributeMasksObj["encounterTypeMask"] = intToHex(encounterTypeMask);
-            attributeMasksObj["layerTypeMask"] = intToHex(layerTypeMask);
-            attributeMasksObj["unusedMask"] = intToHex(unusedMask);
+            attributeMasksObj[AttrConsts::BehaviorStr] = intToHex(behaviorMask);
+            attributeMasksObj[AttrConsts::TerrainTypeStr] = intToHex(terrainTypeMask);
+            attributeMasksObj[AttrConsts::EncounterTypeStr] = intToHex(encounterTypeMask);
+            attributeMasksObj[AttrConsts::LayerTypeStr] = intToHex(layerTypeMask);
+            attributeMasksObj[AttrConsts::UnusedStr] = intToHex(unusedMask);
         }
 
         metatilesObj["attributeMasks"] = attributeMasksObj;
@@ -1153,11 +1154,9 @@ void Project::writeTilesetMetatileAttributesAsJson(QString path, const QList<Met
         OrderedJson::array metatileAttrArr;
         for (Metatile *metatile : metatiles) {
             OrderedJson::object metatileAttributeObj;
-            auto attributeMap = metatile->getAttributesMap();
-            auto keys = attributeMap.keys();
+            auto keys = metatile->getAttributeKeys();
             for (auto attribute: keys) {
-                auto key = Metatile::AttrEnumToString(attribute);
-                metatileAttributeObj[key] = static_cast<int>(attributeMap[attribute]);
+                metatileAttributeObj[attribute] = static_cast<int>(metatile->getAttribute(attribute));
             }
             OrderedJson::object metatileObj;
             metatileObj["attributes"] = metatileAttributeObj;
@@ -1254,6 +1253,11 @@ Tileset* Project::loadTileset(QString label, Tileset *tileset) {
         tileset->palettes_label = tilesetAttributes.value("palettes");
         tileset->metatiles_label = tilesetAttributes.value("metatiles");
         tileset->metatile_attrs_label = tilesetAttributes.value("metatileAttributes");
+        // If we're to use json to store and load metatile data, we should overwrite the path stored in the C header
+        if (projectConfig.getTilesetsStoreMetatileDataAsJson()) {
+            tileset->metatiles_label = replaceFileExtension(tileset->metatiles_label, "json");
+            tileset->metatile_attrs_label = replaceFileExtension(tileset->metatile_attrs_label, "json");
+        }
     }
 
     loadTilesetAssets(tileset);
@@ -1916,12 +1920,14 @@ void Project::readMetatileAttributesFromJson(QString path, QList<Metatile*>& met
     QJsonObject attributeMasksObj = metatilesObj["attributeMasks"].toObject();
 
     metatileAttrBitMasks = QMap<QString, uint32_t>();
+    auto metatileAttrPacker = std::make_shared<QMap<QString, BitPacker>>();
     // Loop through all the attribute masks
     // Allow arbitrarily named keys and set them accordingly
     for (auto key: attributeMasksObj.keys()){
         auto str = attributeMasksObj[key].toString();
         uint32_t bitmask = hexToInt<uint32_t>(str);
         metatileAttrBitMasks->insert(key, bitmask);
+        metatileAttrPacker->insert(key, bitmask);
     }
 
     QJsonArray metatileAttrArr = metatilesObj["metatileAttributes"].toArray();
@@ -1937,6 +1943,8 @@ void Project::readMetatileAttributesFromJson(QString path, QList<Metatile*>& met
             // TODO(@Traeighsea): Log an error
             continue;
 
+        metatiles.at(i)->setCustomBitPacker(metatileAttrPacker);
+
         QJsonObject attrObj = metatileAttrObj["attributes"].toObject();
 
         // Loop through all the attributes
@@ -1948,15 +1956,14 @@ void Project::readMetatileAttributesFromJson(QString path, QList<Metatile*>& met
                 logError(QString("Issue parsing metatile attribute %1 index %2 in %3.").arg(key).arg(i).arg(path));
                 continue;
             }
-            Metatile::Attr attr = Metatile::StringToAttrEnum(key.toStdString());
             // TODO(@traeighsea): Should we check their value is within the declared mask range and log a warning?
 
             // Special case unused because we wanna preserve the data
             if (key == "unused") {
                 auto unusedVal = metatiles.at(i)->getAttribute(Metatile::Attr::Unused);
-                metatiles.at(i)->setAttribute(attr, attrVal | unusedVal);
+                metatiles.at(i)->setAttribute(key, attrVal | unusedVal);
             } else {
-                metatiles.at(i)->setAttribute(attr, attrVal);
+                metatiles.at(i)->setAttribute(key, attrVal);
             }
         }
     }
