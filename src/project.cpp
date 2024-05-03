@@ -1052,7 +1052,7 @@ void Project::writeTilesetMetatileAttributes(QString path, const QList<Metatile 
 
 void Project::saveTilesetMetatileAttributesAsJson(Tileset * tileset) {
     auto path = tileset->metatile_attrs_path;
-    writeTilesetMetatileAttributesAsJson(path, tileset->metatiles, tileset->is_secondary, tileset->metatileAttrBitMasks);
+    writeTilesetMetatileAttributesAsJson(path, tileset->metatiles, tileset->is_secondary, tileset->metatileAttrBitMasks, tileset->numMetatiles);
 }
 
 void Project::saveTilesetMetatilesAsJson(Tileset *tileset) {
@@ -1109,19 +1109,24 @@ void Project::writeTilesetMetatilesAsJson(QString path, const QList<Metatile *>&
     }
 }
 
-void Project::writeTilesetMetatileAttributesAsJson(QString path, const QList<Metatile *>& metatiles, bool isSecondary, std::optional<QMap<QString, uint32_t>>& metatileAttrBitMasks) {
+void Project::writeTilesetMetatileAttributesAsJson(QString path,
+                                                   const QList<Metatile *>& metatiles,
+                                                   bool isSecondary,
+                                                   std::optional<QMap<QString, uint32_t>>& metatileAttrBitMasks,
+                                                   std::optional<unsigned>& tilesetNumMetatiles) {
     QFile metatileAttrFile(path);
     if (metatileAttrFile.open(QIODevice::WriteOnly)) {      
         OrderedJson::object metatilesObj;
 
         // We want to describe how the data is serialized, which can ignore project wide settings
         int numMetatiles = isSecondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
-        if (metatiles.size() != numMetatiles) {
-            // if there's a differing number of metatiles, we want to ignore the project config setting
-            numMetatiles = metatiles.size();
-            // TODO(@Traeighsea): Emit a warning
+        if (tilesetNumMetatiles) {
+            // if there's a num metatiles set by the tileset, we want to ignore the project config setting
+            numMetatiles = *tilesetNumMetatiles;
         }
         metatilesObj["numMetatiles"] = numMetatiles;
+        int numMetatilesUsed = metatiles.size();
+        metatilesObj["numMetatilesUsed"] = numMetatilesUsed;
 
         int metatileAttributeSize = projectConfig.getMetatileAttributesSize() * 8;
         // TODO(@traeighsea): Add something to retain the attribute sizes and masks for "custom" defined packers
@@ -1253,6 +1258,9 @@ Tileset* Project::loadTileset(QString label, Tileset *tileset) {
         tileset->palettes_label = tilesetAttributes.value("palettes");
         tileset->metatiles_label = tilesetAttributes.value("metatiles");
         tileset->metatile_attrs_label = tilesetAttributes.value("metatileAttributes");
+        // TODO(@traeighsea): Should we get the numTiles here or from the json?
+        // tileset->numMetatiles = tilesetAttributes.value("numTiles");
+
         // If we're to use json to store and load metatile data, we should overwrite the path stored in the C header
         if (projectConfig.getTilesetsStoreMetatileDataAsJson()) {
             tileset->metatiles_label = replaceFileExtension(tileset->metatiles_label, "json");
@@ -1897,7 +1905,10 @@ void Project::readMetatilesFromJson(QString path, QList<Metatile*>& metatiles) {
     }
 }
 
-void Project::readMetatileAttributesFromJson(QString path, QList<Metatile*>& metatiles,  std::optional<QMap<QString, uint32_t>>& metatileAttrBitMasks) {
+void Project::readMetatileAttributesFromJson(QString path,
+                                             QList<Metatile*>& metatiles,
+                                             std::optional<QMap<QString, uint32_t>>& metatileAttrBitMasks,
+                                             std::optional<unsigned>& tilesetNumMetatiles) {
     if (metatiles.empty()) {
         logError(QString("Expected metatile list to not be empty at %1").arg(path));
         return;
@@ -1912,9 +1923,12 @@ void Project::readMetatileAttributesFromJson(QString path, QList<Metatile*>& met
     QJsonObject metatilesObj = metatileAttrDoc.object();
 
     // TODO(@Traeighsea): Adding a max metatiles var to tilesets could be useful in having non global tilesets
-    // auto maxNumMetatiles = metatilesObj["maxNumMetatiles"].toInt();
+    bool succeeded{false};
+    auto numMetatiles = ParseUtil::jsonToInt(metatilesObj["numMetatiles"], &succeeded);
+    if (succeeded) {
+        tilesetNumMetatiles = numMetatiles;
+    }
 
-    //auto numMetatiles = metatilesObj["numMetatiles"].toInt();
     //auto attributeSizeInBits = metatilesObj["attributeSizeInBits"].toInt();
 
     QJsonObject attributeMasksObj = metatilesObj["attributeMasks"].toObject();
@@ -1976,7 +1990,7 @@ void Project::loadTilesetMetatilesFromJson(Tileset* tileset) {
     readMetatilesFromJson(metatilesPath, metatiles);
 
     auto metatileAttrsPath = tileset->metatile_attrs_path;
-    readMetatileAttributesFromJson(metatileAttrsPath, metatiles, tileset->metatileAttrBitMasks);
+    readMetatileAttributesFromJson(metatileAttrsPath, metatiles, tileset->metatileAttrBitMasks, tileset->numMetatiles);
 
     tileset->metatiles = metatiles;
 }
@@ -2673,7 +2687,7 @@ bool Project::importMetatileDataFromJson() {
 
         auto attributesPath = tileset->metatile_attrs_path;
         attributesPath = replaceFileExtension(attributesPath, "json");
-        readMetatileAttributesFromJson(attributesPath, metatiles, tileset->metatileAttrBitMasks);
+        readMetatileAttributesFromJson(attributesPath, metatiles, tileset->metatileAttrBitMasks, tileset->numMetatiles);
 
         tileset->metatiles = metatiles;
     }
@@ -2691,7 +2705,11 @@ bool Project::exportMetatileDataAsJson() {
 
         auto attributesPath = tileset->metatile_attrs_path;
         attributesPath = replaceFileExtension(attributesPath, "json");
-        writeTilesetMetatileAttributesAsJson(attributesPath, tileset->metatiles, tileset->is_secondary, tileset->metatileAttrBitMasks);
+        writeTilesetMetatileAttributesAsJson(attributesPath,
+                                             tileset->metatiles,
+                                             tileset->is_secondary,
+                                             tileset->metatileAttrBitMasks,
+                                             tileset->numMetatiles);
     }
     return true;
 }

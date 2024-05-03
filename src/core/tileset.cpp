@@ -258,7 +258,6 @@ bool Tileset::appendToHeaders(QString root, QString friendlyName, bool usingAsm)
         dataString.append(QString("    .metatiles = gMetatiles_%1,\n").arg(friendlyName));
         dataString.append(QString("    .metatileAttributes = gMetatileAttributes_%1,\n").arg(friendlyName));
         if (projectConfig.getTilesetsHaveCallback()) dataString.append("    .callback = NULL,\n");
-        // TODO(@Traeighsea): Add custom data fields via a tileset json
         dataString.append("};\n");
     }
     file.write(dataString.toUtf8());
