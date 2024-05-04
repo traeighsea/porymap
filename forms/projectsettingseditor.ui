@@ -995,6 +995,16 @@
                     </property>
                    </widget>
                   </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_TilesetVariableNumMetatiles">
+                    <property name="toolTip">
+                     <string>Enables the ability to have tilesets of varying metatiles and tile sizes for primary and secondary tilesets. Requires store Metatile data as json to be enabled!</string>
+                    </property>
+                    <property name="text">
+                     <string>Variable Num Metatiles (Experimental)</string>
+                    </property>
+                   </widget>
+                  </item>
                  </layout>
                 </widget>
                </item>

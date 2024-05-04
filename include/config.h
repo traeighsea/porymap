@@ -421,6 +421,8 @@ public:
     bool getTilesetsHaveIsCompressed();
     void setTilesetsStoreMetatileDataAsJson(bool enabled);
     bool getTilesetsStoreMetatileDataAsJson();
+    void setTilesetsHaveVariableNumMetatiles(bool enabled);
+    bool getTilesetsHaveVariableNumMetatiles();
     int getMetatileAttributesSize();
     void setMetatileAttributesSize(int size);
     uint32_t getMetatileBehaviorMask();
@@ -488,6 +490,7 @@ private:
     bool tilesetsHaveCallback;
     bool tilesetsHaveIsCompressed;
     bool tilesetsStoreMetatileDataAsJson;
+    bool tilesetsHaveVariableNumMetatiles;
     int metatileAttributesSize;
     uint32_t metatileBehaviorMask;
     uint32_t metatileTerrainTypeMask;

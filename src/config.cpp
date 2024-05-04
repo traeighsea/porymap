@@ -1450,6 +1450,15 @@ bool ProjectConfig::getTilesetsStoreMetatileDataAsJson() {
     return this->tilesetsStoreMetatileDataAsJson;
 }
 
+void ProjectConfig::setTilesetsHaveVariableNumMetatiles(bool enabled) {
+    this->tilesetsHaveVariableNumMetatiles = enabled;
+    this->save();
+}
+
+bool ProjectConfig::getTilesetsHaveVariableNumMetatiles() {
+    return this->tilesetsHaveVariableNumMetatiles;
+}
+
 int ProjectConfig::getMetatileAttributesSize() {
     return this->metatileAttributesSize;
 }
