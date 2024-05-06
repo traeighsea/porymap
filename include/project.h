@@ -147,7 +147,6 @@ public:
     void loadTilesetAssets(Tileset*);
     void loadTilesetTiles(Tileset*, QImage);
     void loadTilesetMetatiles(Tileset*);
-    void loadTilesetMetatilesFromJson(Tileset*);
     void loadTilesetMetatileLabels(Tileset*);
     void loadTilesetPalettes(Tileset*);
     void readTilesetPaths(Tileset* tileset);
@@ -249,19 +248,19 @@ public:
 private:
     void updateMapLayout(Map*);
 
-    // Expects an empty list of metatiles additionally populates the list (Should be called before readTilesetMetatileAttrs)
+    /// Expects an empty list of metatiles additionally populates the list (Should be called before readTilesetMetatileAttrs)
     void readTilesetMetatiles(QString, QList<Metatile *>&);
-    // Expects an already populated list of metatiles (Should be called after readTilesetMetatiles)
+    /// Expects an already populated list of metatiles (Should be called after readTilesetMetatiles)
     void readTilesetMetatileAttrs(QString, QList<Metatile *>&);
-    // Expects an empty list of metatiles additionally populates the list (Should be called before readTilesetMetatileAttributesFromJson)
-    void readTilesetMetatilesFromJson(QString path, QList<Metatile*>& metatiles);
-    // Expects an already populated list of metatiles (Should be called after readTilesetMetatilesFromJson)
-    void readTilesetMetatileAttributesFromJson(QString path, QList<Metatile*>& metatiles, bool, std::optional<QMap<QString, uint32_t>>&, std::optional<unsigned>&);
+    /// Expects an empty list of metatiles additionally populates the list (Should be called before readTilesetMetatileAttributesFromJson)
+    void readTilesetMetatilesFromJson(QString path, Tileset*);
+    /// Expects an already populated list of metatiles (Should be called after readTilesetMetatilesFromJson)
+    void readTilesetMetatileAttributesFromJson(QString path, Tileset*);
 
     void writeTilesetMetatiles(QString, const QList<Metatile *>&);
     void writeTilesetMetatileAttributes(QString, const QList<Metatile *>&);
-    void writeTilesetMetatilesAsJson(QString, const QList<Metatile *>&, bool);
-    void writeTilesetMetatileAttributesAsJson(QString, const QList<Metatile *>&, bool, std::optional<QMap<QString, uint32_t>>&, std::optional<unsigned>&);
+    void writeTilesetMetatilesAsJson(QString, Tileset*);
+    void writeTilesetMetatileAttributesAsJson(QString, Tileset*);
 
     void setNewMapBlockdata(Map* map);
     void setNewMapBorder(Map *map);
