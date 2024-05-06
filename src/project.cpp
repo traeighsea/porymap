@@ -83,6 +83,12 @@ namespace {
         auto strPath = replaceFileExtension(path.QString::toStdString(), extension);
         return QString::fromStdString(strPath); 
     }
+
+    std::string getFileExtensionFromPath(const QString& path) {
+        auto stdPath = path.QString::toStdString();
+        size_t lastdot = stdPath.find_last_of(".");
+        return stdPath.substr(lastdot + 1, stdPath.back());
+    }
 }
 
 Project::Project(QWidget *parent) :
@@ -1078,9 +1084,7 @@ void Project::writeTilesetMetatilesAsJson(QString path, Tileset* tileset) {
 
         int numTilesInMetatile = projectConfig.getNumTilesInMetatile();
         if (tileset->metatiles[0]->tiles.size() != numTilesInMetatile) {
-            // if there's a differing number of tiles, we want to ignore the project config setting
             numTilesInMetatile = tileset->metatiles[0]->tiles.size();
-            // TODO(@Traeighsea): Emit a warning
         }
         metatilesObj["numTilesInMetatile"] = numTilesInMetatile;
 
@@ -1739,6 +1743,11 @@ void Project::loadTilesetTiles(Tileset *tileset, QImage image) {
 }
 
 void Project::readTilesetMetatiles(QString path, QList<Metatile *>& metatiles) {
+    if (getFileExtensionFromPath(path) != "bin") {
+        logError(QString("Incorrect file format, expected bin extension %1").arg(path));
+        return;
+    }
+
     QFile metatiles_file(path);
     if (metatiles_file.open(QIODevice::ReadOnly)) {
         QByteArray data = metatiles_file.readAll();
@@ -1762,6 +1771,11 @@ void Project::readTilesetMetatiles(QString path, QList<Metatile *>& metatiles) {
 }
 
 void Project::readTilesetMetatileAttrs(QString path, QList<Metatile *>& metatiles) {
+    if (getFileExtensionFromPath(path) != "bin") {
+        logError(QString("Incorrect file format, expected bin extension %1").arg(path));
+        return;
+    }
+
     QFile attrs_file(path);
     if (attrs_file.open(QIODevice::ReadOnly)) {
         QByteArray data = attrs_file.readAll();
@@ -1806,6 +1820,11 @@ void Project::loadTilesetMetatiles(Tileset* tileset) {
 }
 
 void Project::readTilesetMetatilesFromJson(QString path, Tileset* tileset) {
+    if (getFileExtensionFromPath(path) != "json") {
+        logError(QString("Incorrect file format, expected json extension %1").arg(path));
+        return;
+    }
+
     if (!tileset->metatiles.empty()) {
         logError(QString("Expected metatiles list to be empty at %1").arg(path));
         return;
@@ -1937,6 +1956,11 @@ void Project::readTilesetMetatilesFromJson(QString path, Tileset* tileset) {
 }
 
 void Project::readTilesetMetatileAttributesFromJson(QString path, Tileset* tileset) {
+    if (getFileExtensionFromPath(path) != "json") {
+        logError(QString("Incorrect file format, expected json extension %1").arg(path));
+        return;
+    }
+
     if (tileset->metatiles.empty()) {
         logError(QString("Expected metatile list to not be empty at %1").arg(path));
         return;
@@ -1983,9 +2007,10 @@ void Project::readTilesetMetatileAttributesFromJson(QString path, Tileset* tiles
 
     for (int i = 0; i < metatileAttrArr.size(); i++) {
         QJsonObject metatileAttrObj = metatileAttrArr[i].toObject();
-        if (metatileAttrObj.isEmpty())
+        if (metatileAttrObj.isEmpty()) {
             // TODO(@Traeighsea): Log an error
             continue;
+        }
 
         tileset->metatiles.at(i)->setCustomBitPacker(metatileAttrPacker);
 
