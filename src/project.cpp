@@ -921,17 +921,10 @@ void Project::saveHealLocationsConstants() {
 
 void Project::saveTilesets(Tileset *primaryTileset, Tileset *secondaryTileset) {
     saveTilesetMetatileLabels(primaryTileset, secondaryTileset);
-    if(projectConfig.getTilesetsStoreMetatileDataAsJson()) {
-        saveTilesetMetatileAttributesAsJson(primaryTileset);
-        saveTilesetMetatileAttributesAsJson(secondaryTileset);
-        saveTilesetMetatilesAsJson(primaryTileset);
-        saveTilesetMetatilesAsJson(secondaryTileset);
-    } else {
-        saveTilesetMetatileAttributes(primaryTileset);
-        saveTilesetMetatileAttributes(secondaryTileset);
-        saveTilesetMetatiles(primaryTileset);
-        saveTilesetMetatiles(secondaryTileset);
-    }
+    saveTilesetMetatileAttributes(primaryTileset);
+    saveTilesetMetatileAttributes(secondaryTileset);
+    saveTilesetMetatiles(primaryTileset);
+    saveTilesetMetatiles(secondaryTileset);
     saveTilesetTilesImage(primaryTileset);
     saveTilesetTilesImage(secondaryTileset);
     saveTilesetPalettes(primaryTileset);
@@ -1007,12 +1000,20 @@ void Project::saveTilesetMetatileLabels(Tileset *primaryTileset, Tileset *second
 
 void Project::saveTilesetMetatileAttributes(Tileset *tileset) {
     auto path = tileset->metatile_attrs_path;
-    writeTilesetMetatileAttributes(path, tileset->metatiles);
+    if (projectConfig.getTilesetsStoreMetatileDataAsJson()) {
+        writeTilesetMetatileAttributesAsJson(path, tileset);
+    } else {
+        writeTilesetMetatileAttributes(path, tileset->metatiles);
+    }
 }
 
 void Project::saveTilesetMetatiles(Tileset *tileset) {
     auto path = tileset->metatiles_path;
-    writeTilesetMetatiles(path, tileset->metatiles);
+    if (projectConfig.getTilesetsStoreMetatileDataAsJson()) {
+        writeTilesetMetatileAttributesAsJson(path, tileset);
+    } else {
+        writeTilesetMetatiles(path, tileset->metatiles);
+    }
 }
 
 void Project::writeTilesetMetatiles(QString path, const QList<Metatile *>& metatiles) {
@@ -1048,16 +1049,6 @@ void Project::writeTilesetMetatileAttributes(QString path, const QList<Metatile 
     } else {
         logError(QString("Could not save tileset metatile attributes file '%1'").arg(path));
     }
-}
-
-void Project::saveTilesetMetatileAttributesAsJson(Tileset * tileset) {
-    auto path = tileset->metatile_attrs_path;
-    writeTilesetMetatileAttributesAsJson(path, tileset);
-}
-
-void Project::saveTilesetMetatilesAsJson(Tileset *tileset) {
-    auto path = tileset->metatiles_path;
-    writeTilesetMetatilesAsJson(path, tileset);
 }
 
 void Project::writeTilesetMetatilesAsJson(QString path, Tileset* tileset) {

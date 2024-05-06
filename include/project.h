@@ -169,8 +169,6 @@ public:
     void saveTilesetMetatileLabels(Tileset*, Tileset*);
     void saveTilesetMetatileAttributes(Tileset*);
     void saveTilesetMetatiles(Tileset*);
-    void saveTilesetMetatileAttributesAsJson(Tileset*);
-    void saveTilesetMetatilesAsJson(Tileset*);
     void saveTilesetTilesImage(Tileset*);
     void saveTilesetPalettes(Tileset*);
     void appendTilesetLabel(QString label, QString isSecondaryStr);
