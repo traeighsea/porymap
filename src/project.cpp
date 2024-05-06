@@ -1120,12 +1120,14 @@ void Project::writeTilesetMetatileAttributesAsJson(QString path,
 
         // We want to describe how the data is serialized, which can ignore project wide settings
         int numMetatiles = isSecondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
-        if (tilesetNumMetatiles) {
+        if (projectConfig.getTilesetsHaveVariableNumMetatiles() && tilesetNumMetatiles) {
             // if there's a num metatiles set by the tileset, we want to ignore the project config setting
             numMetatiles = *tilesetNumMetatiles;
         }
         metatilesObj["numMetatiles"] = numMetatiles;
+
         int numMetatilesUsed = metatiles.size();
+        // This isn't technically isn't necessary, but it can give the user a bit of information at a glance
         metatilesObj["numMetatilesUsed"] = numMetatilesUsed;
 
         int metatileAttributeSize = projectConfig.getMetatileAttributesSize() * 8;
@@ -1260,12 +1262,6 @@ Tileset* Project::loadTileset(QString label, Tileset *tileset) {
         tileset->metatile_attrs_label = tilesetAttributes.value("metatileAttributes");
         // TODO(@traeighsea): Should we get the numTiles here or from the json?
         // tileset->numMetatiles = tilesetAttributes.value("numTiles");
-
-        // If we're to use json to store and load metatile data, we should overwrite the path stored in the C header
-        if (projectConfig.getTilesetsStoreMetatileDataAsJson()) {
-            tileset->metatiles_label = replaceFileExtension(tileset->metatiles_label, "json");
-            tileset->metatile_attrs_label = replaceFileExtension(tileset->metatile_attrs_label, "json");
-        }
     }
 
     loadTilesetAssets(tileset);
@@ -1678,8 +1674,7 @@ void Project::readTilesetPaths(Tileset* tileset) {
             if (projectConfig.getTilesetsStoreMetatileDataAsJson()) {
                 // If we're storing metatile data as json, we want to update the path to use json, 
                 // however we still want to keep the bin file extension in the header file
-                auto updatedPath = metatilesPath;
-                replaceFileExtension(updatedPath, "json");
+                auto updatedPath = replaceFileExtension(metatilesPath, "json");
                 tileset->metatiles_path = rootDir + updatedPath;
             } else {
                 tileset->metatiles_path = rootDir + metatilesPath;
@@ -1689,8 +1684,7 @@ void Project::readTilesetPaths(Tileset* tileset) {
             if (projectConfig.getTilesetsStoreMetatileDataAsJson()) {
                 // If we're storing metatile data as json, we want to update the path to use json, 
                 // however we still want to keep the bin file extension in the header file
-                auto updatedPath = metatileAttrsPath;
-                replaceFileExtension(updatedPath, "json");
+                auto updatedPath = replaceFileExtension(metatileAttrsPath, "json");
                 tileset->metatile_attrs_path = rootDir + updatedPath;
             } else {
                 tileset->metatile_attrs_path = rootDir + metatileAttrsPath;
@@ -1808,7 +1802,7 @@ void Project::loadTilesetMetatiles(Tileset* tileset) {
     tileset->metatiles = metatilesList;
 }
 
-void Project::readMetatilesFromJson(QString path, QList<Metatile*>& metatiles) {
+void Project::readTilesetMetatilesFromJson(QString path, QList<Metatile*>& metatiles) {
     if (!metatiles.empty()) {
         logError(QString("Expected metatiles list to be empty at %1").arg(path));
         return;
@@ -1905,8 +1899,9 @@ void Project::readMetatilesFromJson(QString path, QList<Metatile*>& metatiles) {
     }
 }
 
-void Project::readMetatileAttributesFromJson(QString path,
+void Project::readTilesetMetatileAttributesFromJson(QString path,
                                              QList<Metatile*>& metatiles,
+                                             bool isSecondary,
                                              std::optional<QMap<QString, uint32_t>>& metatileAttrBitMasks,
                                              std::optional<unsigned>& tilesetNumMetatiles) {
     if (metatiles.empty()) {
@@ -1922,13 +1917,20 @@ void Project::readMetatileAttributesFromJson(QString path,
     }
     QJsonObject metatilesObj = metatileAttrDoc.object();
 
-    // TODO(@Traeighsea): Adding a max metatiles var to tilesets could be useful in having non global tilesets
+    tilesetNumMetatiles.reset();
     bool succeeded{false};
     auto numMetatiles = ParseUtil::jsonToInt(metatilesObj["numMetatiles"], &succeeded);
-    if (succeeded) {
+    // This variable is optional
+    if (projectConfig.getTilesetsHaveVariableNumMetatiles() && succeeded) {
         tilesetNumMetatiles = numMetatiles;
+    } else {
+        int numMetatilesDefault = isSecondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
+        if (numMetatiles != numMetatilesDefault){
+            logWarn(QString("Num metatiles %1 different than expected in %2").arg(numMetatiles).arg(path));
+        }
     }
 
+    // TODO(@traeighsea): Use the attributeSizeInBits
     //auto attributeSizeInBits = metatilesObj["attributeSizeInBits"].toInt();
 
     QJsonObject attributeMasksObj = metatilesObj["attributeMasks"].toObject();
@@ -1987,10 +1989,10 @@ void Project::loadTilesetMetatilesFromJson(Tileset* tileset) {
     QList<Metatile*> metatiles;
 
     auto metatilesPath = tileset->metatiles_path;
-    readMetatilesFromJson(metatilesPath, metatiles);
+    readTilesetMetatilesFromJson(metatilesPath, metatiles);
 
     auto metatileAttrsPath = tileset->metatile_attrs_path;
-    readMetatileAttributesFromJson(metatileAttrsPath, metatiles, tileset->metatileAttrBitMasks, tileset->numMetatiles);
+    readTilesetMetatileAttributesFromJson(metatileAttrsPath, metatiles, tileset->is_secondary, tileset->metatileAttrBitMasks, tileset->numMetatiles);
 
     tileset->metatiles = metatiles;
 }
@@ -2683,11 +2685,11 @@ bool Project::importMetatileDataFromJson() {
         QList<Metatile *> metatiles;
         auto metatilesPath = tileset->metatiles_path;
         metatilesPath = replaceFileExtension(metatilesPath, "json");
-        readMetatilesFromJson(metatilesPath, metatiles);
+        readTilesetMetatilesFromJson(metatilesPath, metatiles);
 
         auto attributesPath = tileset->metatile_attrs_path;
         attributesPath = replaceFileExtension(attributesPath, "json");
-        readMetatileAttributesFromJson(attributesPath, metatiles, tileset->metatileAttrBitMasks, tileset->numMetatiles);
+        readTilesetMetatileAttributesFromJson(attributesPath, metatiles, tileset->is_secondary, tileset->metatileAttrBitMasks, tileset->numMetatiles);
 
         tileset->metatiles = metatiles;
     }

@@ -253,10 +253,10 @@ private:
     void readTilesetMetatiles(QString, QList<Metatile *>&);
     // Expects an already populated list of metatiles (Should be called after readTilesetMetatiles)
     void readTilesetMetatileAttrs(QString, QList<Metatile *>&);
-    // Expects an empty list of metatiles additionally populates the list (Should be called before readMetatileAttributesFromJson)
-    void readMetatilesFromJson(QString path, QList<Metatile*>& metatiles);
-    // Expects an already populated list of metatiles (Should be called after readMetatilesFromJson)
-    void readMetatileAttributesFromJson(QString path, QList<Metatile*>& metatiles, std::optional<QMap<QString, uint32_t>>&, std::optional<unsigned>&);
+    // Expects an empty list of metatiles additionally populates the list (Should be called before readTilesetMetatileAttributesFromJson)
+    void readTilesetMetatilesFromJson(QString path, QList<Metatile*>& metatiles);
+    // Expects an already populated list of metatiles (Should be called after readTilesetMetatilesFromJson)
+    void readTilesetMetatileAttributesFromJson(QString path, QList<Metatile*>& metatiles, bool, std::optional<QMap<QString, uint32_t>>&, std::optional<unsigned>&);
 
     void writeTilesetMetatiles(QString, const QList<Metatile *>&);
     void writeTilesetMetatileAttributes(QString, const QList<Metatile *>&);
