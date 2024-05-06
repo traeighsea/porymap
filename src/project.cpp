@@ -1057,17 +1057,24 @@ void Project::writeTilesetMetatilesAsJson(QString path, Tileset* tileset) {
         OrderedJson::object metatilesObj;
 
         // We want to describe how the data is serialized, which can ignore project wide settings
-        int numMetatiles = tileset->is_secondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
+        int numMetatiles = tileset->is_secondary ? Project::getNumMetatilesTotal() - Project::getNumMetatilesPrimary() : Project::getNumMetatilesPrimary();
         if (projectConfig.getTilesetsHaveVariableNumMetatiles() && tileset->numMetatiles) {
             // if there's a num metatiles set by the tileset, we want to ignore the project config setting
             numMetatiles = *tileset->numMetatiles;
         }
         metatilesObj["numMetatiles"] = numMetatiles;
 
-        int numMetatilesUsed = tileset->metatiles.size();
-        // This isn't technically isn't necessary, but it can give the user a bit of information at a glance
-        metatilesObj["numMetatilesUsed"] = numMetatilesUsed;
+        int numTiles = tileset->is_secondary ? Project::getNumTilesTotal() - Project::getNumTilesPrimary() : Project::getNumTilesPrimary();
+        if (projectConfig.getTilesetsHaveVariableNumTiles() && tileset->numTiles) {
+            numTiles = *tileset->numTiles;
+        }
+        metatilesObj["numTiles"] = numTiles;
 
+        int numPals = tileset->is_secondary ? Project::getNumPalettesTotal() - Project::getNumPalettesPrimary() : Project::getNumPalettesPrimary();
+        if (projectConfig.getTilesetsHaveVariableNumPalettes() && tileset->numPals) {
+            numPals = *tileset->numPals;
+        }
+        metatilesObj["numPals"] = numPals;
 
         int numTilesInMetatile = projectConfig.getNumTilesInMetatile();
         if (tileset->metatiles[0]->tiles.size() != numTilesInMetatile) {
@@ -1111,16 +1118,12 @@ void Project::writeTilesetMetatileAttributesAsJson(QString path,
         OrderedJson::object metatilesObj;
 
         // We want to describe how the data is serialized, which can ignore project wide settings
-        int numMetatiles = tileset->is_secondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
+        int numMetatiles = tileset->is_secondary ? Project::getNumMetatilesTotal() - Project::getNumMetatilesPrimary() : Project::getNumMetatilesPrimary();
         if (projectConfig.getTilesetsHaveVariableNumMetatiles() && tileset->numMetatiles) {
             // if there's a num metatiles set by the tileset, we want to ignore the project config setting
             numMetatiles = *tileset->numMetatiles;
         }
         metatilesObj["numMetatiles"] = numMetatiles;
-
-        int numMetatilesUsed = tileset->metatiles.size();
-        // This isn't technically isn't necessary, but it can give the user a bit of information at a glance
-        metatilesObj["numMetatilesUsed"] = numMetatilesUsed;
 
         int metatileAttributeSize = projectConfig.getMetatileAttributesSize() * 8;
         // TODO(@traeighsea): Add something to retain the attribute sizes and masks for "custom" defined packers
@@ -1823,6 +1826,40 @@ void Project::readTilesetMetatilesFromJson(QString path, Tileset* tileset) {
         return;
     }
 
+    tileset->numMetatiles.reset();
+    bool succeeded{false};
+    auto numMetatiles = ParseUtil::jsonToInt(metatilesObj["numMetatiles"], &succeeded);
+    if (projectConfig.getTilesetsHaveVariableNumMetatiles() && succeeded) {
+        tileset->numMetatiles = numMetatiles;
+    } else {
+        int numMetatilesDefault = tileset->is_secondary ? Project::getNumMetatilesTotal() - Project::getNumMetatilesPrimary() : Project::getNumMetatilesPrimary();
+        if (numMetatiles != numMetatilesDefault){
+            logWarn(QString("Num metatiles %1 different than expected in %2").arg(numMetatiles).arg(path));
+        }
+    }
+
+    tileset->numTiles.reset();
+    auto numTiles = ParseUtil::jsonToInt(metatilesObj["numTiles"], &succeeded);
+    if (projectConfig.getTilesetsHaveVariableNumTiles() && succeeded) {
+        tileset->numTiles = numTiles;
+    } else {
+        int numTilesDefault = tileset->is_secondary ? Project::getNumTilesTotal() - Project::getNumTilesPrimary() : Project::getNumTilesPrimary();
+        if (numTiles != numTilesDefault){
+            logWarn(QString("Num tiles %1 different than expected in %2").arg(numTiles).arg(path));
+        }
+    }
+
+    tileset->numPals.reset();
+    auto numPals = ParseUtil::jsonToInt(metatilesObj["numPals"], &succeeded);
+    if (projectConfig.getTilesetsHaveVariableNumPalettes() && succeeded) {
+        tileset->numPals = numPals;
+    } else {
+        int numPalsDefault = tileset->is_secondary ? Project::getNumPalettesTotal() - Project::getNumPalettesPrimary() : Project::getNumPalettesPrimary();
+        if (numPals != numPalsDefault){
+            logWarn(QString("Num palettes %1 different than expected in %2").arg(numPals).arg(path));
+        }
+    }
+
     QList<QString> requiredFields = QList<QString>{
         "tiles",
     };
@@ -1913,15 +1950,10 @@ void Project::readTilesetMetatileAttributesFromJson(QString path, Tileset* tiles
     }
     QJsonObject metatilesObj = metatileAttrDoc.object();
 
-    tileset->numMetatiles.reset();
-    bool succeeded{false};
-    auto numMetatiles = ParseUtil::jsonToInt(metatilesObj["numMetatiles"], &succeeded);
-    // This variable is optional
-    if (projectConfig.getTilesetsHaveVariableNumMetatiles() && succeeded) {
-        tileset->numMetatiles = numMetatiles;
-    } else {
-        int numMetatilesDefault = tileset->is_secondary ? Project::num_tiles_total - Project::num_metatiles_primary : Project::num_metatiles_primary;
-        if (numMetatiles != numMetatilesDefault){
+    if (projectConfig.getTilesetsHaveVariableNumMetatiles()) {
+        bool succeeded{false};
+        auto numMetatiles = ParseUtil::jsonToInt(metatilesObj["numMetatiles"], &succeeded);
+        if (succeeded && tileset->numMetatiles != numMetatiles) {
             logWarn(QString("Num metatiles %1 different than expected in %2").arg(numMetatiles).arg(path));
         }
     }
