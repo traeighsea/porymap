@@ -453,6 +453,8 @@ void ProjectSettingsEditor::refresh() {
     ui->checkBox_OutputIsCompressed->setChecked(projectConfig.getTilesetsHaveIsCompressed());
     ui->checkBox_TilesetStoreMetatileDataAsJson->setChecked(projectConfig.getTilesetsStoreMetatileDataAsJson());
     ui->checkBox_TilesetVariableNumMetatiles->setChecked(projectConfig.getTilesetsHaveVariableNumMetatiles());
+    ui->checkBox_TilesetVariableNumTiles->setChecked(projectConfig.getTilesetsHaveVariableNumTiles());
+    ui->checkBox_TilesetVariableNumPalettes->setChecked(projectConfig.getTilesetsHaveVariableNumPalettes());
     ui->checkBox_DisableWarning->setChecked(porymapConfig.getWarpBehaviorWarningDisabled());
 
     // Set spin box values
@@ -531,6 +533,8 @@ void ProjectSettingsEditor::save() {
     projectConfig.setTilesetsHaveIsCompressed(ui->checkBox_OutputIsCompressed->isChecked());
     projectConfig.setTilesetsStoreMetatileDataAsJson(ui->checkBox_TilesetStoreMetatileDataAsJson->isChecked());
     projectConfig.setTilesetsHaveVariableNumMetatiles(ui->checkBox_TilesetVariableNumMetatiles->isChecked());
+    projectConfig.setTilesetsHaveVariableNumTiles(ui->checkBox_TilesetVariableNumTiles->isChecked());
+    projectConfig.setTilesetsHaveVariableNumPalettes(ui->checkBox_TilesetVariableNumPalettes->isChecked());
     porymapConfig.setWarpBehaviorWarningDisabled(ui->checkBox_DisableWarning->isChecked());
 
     // Save spin box settings

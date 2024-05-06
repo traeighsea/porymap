@@ -991,6 +991,12 @@ void ProjectConfig::parseConfigKeyValue(QString key, QString value) {
         this->tilesetsHaveIsCompressed = getConfigBool(key, value);
     } else if (key == "tilesets_store_metatile_data_as_json") {
         this->tilesetsStoreMetatileDataAsJson = getConfigBool(key, value);
+    } else if (key == "tilesets_have_variable_num_metatiles") {
+        this->tilesetsHaveVariableNumMetatiles = getConfigBool(key, value);
+    } else if (key == "tilesets_have_variable_num_tiles") {
+        this->tilesetsHaveVariableNumTiles = getConfigBool(key, value);
+    } else if (key == "tilesets_have_variable_num_palettes") {
+        this->tilesetsHaveVariableNumPalettes = getConfigBool(key, value);
     } else if (key == "event_icon_path_object") {
         this->eventIconPaths[Event::Group::Object] = value;
     } else if (key == "event_icon_path_warp") {
@@ -1081,6 +1087,9 @@ QMap<QString, QString> ProjectConfig::getKeyValueMap() {
     map.insert("tilesets_have_callback", QString::number(this->tilesetsHaveCallback));
     map.insert("tilesets_have_is_compressed", QString::number(this->tilesetsHaveIsCompressed));
     map.insert("tilesets_store_metatile_data_as_json", QString::number(this->tilesetsStoreMetatileDataAsJson));
+    map.insert("tilesets_have_variable_num_metatiles", QString::number(this->getTilesetsHaveVariableNumMetatiles()));
+    map.insert("tilesets_have_variable_num_tiles", QString::number(this->getTilesetsHaveVariableNumTiles()));
+    map.insert("tilesets_have_variable_num_palettes", QString::number(this->getTilesetsHaveVariableNumPalettes()));
     map.insert("metatile_attributes_size", QString::number(this->metatileAttributesSize));
     map.insert("metatile_behavior_mask", "0x" + QString::number(this->metatileBehaviorMask, 16).toUpper());
     map.insert("metatile_terrain_type_mask", "0x" + QString::number(this->metatileTerrainTypeMask, 16).toUpper());
@@ -1457,6 +1466,24 @@ void ProjectConfig::setTilesetsHaveVariableNumMetatiles(bool enabled) {
 
 bool ProjectConfig::getTilesetsHaveVariableNumMetatiles() {
     return this->tilesetsHaveVariableNumMetatiles;
+}
+
+void ProjectConfig::setTilesetsHaveVariableNumTiles(bool enabled) {
+    this->tilesetsHaveVariableNumTiles = enabled;
+    this->save();
+}
+
+bool ProjectConfig::getTilesetsHaveVariableNumTiles() {
+    return this->tilesetsHaveVariableNumTiles;
+}
+
+void ProjectConfig::setTilesetsHaveVariableNumPalettes(bool enabled) {
+    this->tilesetsHaveVariableNumPalettes = enabled;
+    this->save();
+}
+
+bool ProjectConfig::getTilesetsHaveVariableNumPalettes() {
+    return this->tilesetsHaveVariableNumPalettes;
 }
 
 int ProjectConfig::getMetatileAttributesSize() {

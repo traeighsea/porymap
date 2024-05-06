@@ -340,6 +340,9 @@ public:
         this->tilesetsHaveCallback = true;
         this->tilesetsHaveIsCompressed = true;
         this->tilesetsStoreMetatileDataAsJson = false;
+        this->tilesetsHaveVariableNumMetatiles = false;
+        this->tilesetsHaveVariableNumTiles = false;
+        this->tilesetsHaveVariableNumPalettes = false;
         this->filePaths.clear();
         this->eventIconPaths.clear();
         this->pokemonIconPaths.clear();
@@ -423,6 +426,10 @@ public:
     bool getTilesetsStoreMetatileDataAsJson();
     void setTilesetsHaveVariableNumMetatiles(bool enabled);
     bool getTilesetsHaveVariableNumMetatiles();
+    void setTilesetsHaveVariableNumTiles(bool enabled);
+    bool getTilesetsHaveVariableNumTiles();
+    void setTilesetsHaveVariableNumPalettes(bool enabled);
+    bool getTilesetsHaveVariableNumPalettes();
     int getMetatileAttributesSize();
     void setMetatileAttributesSize(int size);
     uint32_t getMetatileBehaviorMask();
@@ -491,6 +498,8 @@ private:
     bool tilesetsHaveIsCompressed;
     bool tilesetsStoreMetatileDataAsJson;
     bool tilesetsHaveVariableNumMetatiles;
+    bool tilesetsHaveVariableNumTiles;
+    bool tilesetsHaveVariableNumPalettes;
     int metatileAttributesSize;
     uint32_t metatileBehaviorMask;
     uint32_t metatileTerrainTypeMask;

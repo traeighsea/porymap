@@ -998,10 +998,30 @@
                   <item>
                    <widget class="QCheckBox" name="checkBox_TilesetVariableNumMetatiles">
                     <property name="toolTip">
-                     <string>Enables the ability to have tilesets of varying metatiles and tile sizes for primary and secondary tilesets. Requires store Metatile data as json to be enabled!</string>
+                     <string>Enables the functionality to have tilesets of varying metatiles sizes for primary and secondary tilesets. Requires store Metatile data as json to be enabled!</string>
                     </property>
                     <property name="text">
-                     <string>Variable Num Metatiles (Experimental)</string>
+                     <string>Variable Num of Metatiles in Tileset (Experimental)</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_TilesetVariableNumTiles">
+                    <property name="toolTip">
+                     <string>Enables the functionality to have tilesets of varying tiles sizes for primary and secondary tilesets. Requires store Metatile data as json to be enabled!</string>
+                    </property>
+                    <property name="text">
+                     <string>Variable Num of Tiles in Tileset (Experimental)</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_TilesetVariableNumPalettes">
+                    <property name="toolTip">
+                     <string>Enables the functionality to have tilesets of varying metatiles and tile sizes for primary and secondary tilesets. Requires store Metatile data as json to be enabled!</string>
+                    </property>
+                    <property name="text">
+                     <string>Variable Num of Palettes in Tileset (Experimental)</string>
                     </property>
                    </widget>
                   </item>
