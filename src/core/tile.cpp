@@ -29,11 +29,3 @@ uint16_t Tile::rawValue() const {
          | ((this->yflip & 1) << 11)
          | ((this->palette & 0xF) << 12));
 }
-
-int Tile::getIndexInTileset(int tileId) {
-    if (tileId < Project::getNumTilesPrimary()) {
-        return tileId;
-    } else {
-        return tileId - Project::getNumTilesPrimary();
-    }
-}

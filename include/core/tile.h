@@ -17,8 +17,6 @@ public:
     uint16_t yflip:1;
     uint16_t palette:4;
     uint16_t rawValue() const;
-
-    static int getIndexInTileset(int);
 };
 
 inline bool operator==(const Tile &a, const Tile &b) {

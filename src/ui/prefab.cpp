@@ -255,6 +255,7 @@ void Prefab::addPrefab(MetatileSelection selection, Map *map, QString name) {
     for (auto metatile : selection.metatileItems) {
         if (!metatile.enabled)
             continue;
+        // TODO(@traeighsea): use numMetatiles in tileset
         if (metatile.metatileId < Project::getNumMetatilesPrimary()) {
             usesPrimaryTileset = true;
         } else if (metatile.metatileId < Project::getNumMetatilesTotal()) {

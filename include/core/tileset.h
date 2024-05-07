@@ -70,6 +70,10 @@ public:
     bool appendToHeaders(QString root, QString friendlyName, bool usingAsm);
     bool appendToGraphics(QString root, QString friendlyName, bool usingAsm);
     bool appendToMetatiles(QString root, QString friendlyName, bool usingAsm);
+
+    int getNumMetatiles() const;
+    int getNumTiles() const;
+    int getNumPalettes() const;
 };
 
 #endif // TILESET_H

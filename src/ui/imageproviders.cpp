@@ -138,7 +138,7 @@ QImage getMetatileImage(
 
 QImage getTileImage(uint16_t tileId, Tileset *primaryTileset, Tileset *secondaryTileset) {
     Tileset *tileset = Tileset::getTileTileset(tileId, primaryTileset, secondaryTileset);
-    int index = Tile::getIndexInTileset(tileId);
+    int index = tileId < primaryTileset->getNumTiles() ? tileId : tileId - primaryTileset->getNumTiles();
     if (!tileset) {
         return QImage();
     }

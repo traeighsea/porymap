@@ -1063,23 +1063,13 @@ void Project::writeTilesetMetatilesAsJson(QString path, Tileset* tileset) {
         OrderedJson::object metatilesObj;
 
         // We want to describe how the data is serialized, which can ignore project wide settings
-        int numMetatiles = tileset->is_secondary ? Project::getNumMetatilesTotal() - Project::getNumMetatilesPrimary() : Project::getNumMetatilesPrimary();
-        if (projectConfig.getTilesetsHaveVariableNumMetatiles() && tileset->numMetatiles) {
-            // if there's a num metatiles set by the tileset, we want to ignore the project config setting
-            numMetatiles = *tileset->numMetatiles;
-        }
+        int numMetatiles = tileset->getNumMetatiles();
         metatilesObj["numMetatiles"] = numMetatiles;
 
-        int numTiles = tileset->is_secondary ? Project::getNumTilesTotal() - Project::getNumTilesPrimary() : Project::getNumTilesPrimary();
-        if (projectConfig.getTilesetsHaveVariableNumTiles() && tileset->numTiles) {
-            numTiles = *tileset->numTiles;
-        }
+        int numTiles = tileset->getNumTiles();
         metatilesObj["numTiles"] = numTiles;
 
-        int numPals = tileset->is_secondary ? Project::getNumPalettesTotal() - Project::getNumPalettesPrimary() : Project::getNumPalettesPrimary();
-        if (projectConfig.getTilesetsHaveVariableNumPalettes() && tileset->numPals) {
-            numPals = *tileset->numPals;
-        }
+        int numPals = tileset->getNumPalettes();
         metatilesObj["numPals"] = numPals;
 
         int numTilesInMetatile = projectConfig.getNumTilesInMetatile();
@@ -1122,11 +1112,7 @@ void Project::writeTilesetMetatileAttributesAsJson(QString path,
         OrderedJson::object metatilesObj;
 
         // We want to describe how the data is serialized, which can ignore project wide settings
-        int numMetatiles = tileset->is_secondary ? Project::getNumMetatilesTotal() - Project::getNumMetatilesPrimary() : Project::getNumMetatilesPrimary();
-        if (projectConfig.getTilesetsHaveVariableNumMetatiles() && tileset->numMetatiles) {
-            // if there's a num metatiles set by the tileset, we want to ignore the project config setting
-            numMetatiles = *tileset->numMetatiles;
-        }
+        int numMetatiles = tileset->getNumMetatiles();
         metatilesObj["numMetatiles"] = numMetatiles;
 
         int metatileAttributeSize = projectConfig.getMetatileAttributesSize() * 8;

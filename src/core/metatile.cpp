@@ -51,14 +51,6 @@ Metatile::Metatile(const int numTiles, std::shared_ptr<QMap<QString, BitPacker>>
                    tiles(numTiles, Tile()), 
                    customBitPacker(attrPacker) {}
 
-int Metatile::getIndexInTileset(int metatileId) {
-    if (metatileId < Project::getNumMetatilesPrimary()) {
-        return metatileId;
-    } else {
-        return metatileId - Project::getNumMetatilesPrimary();
-    }
-}
-
 QPoint Metatile::coordFromPixmapCoord(const QPointF &pixelCoord) {
     int x = static_cast<int>(pixelCoord.x()) / 16;
     int y = static_cast<int>(pixelCoord.y()) / 16;

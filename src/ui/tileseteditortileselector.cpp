@@ -29,10 +29,10 @@ void TilesetEditorTileSelector::draw() {
         QImage tileImage;
         if (tile < primaryLength) {
             tileImage = getPalettedTileImage(tile, this->primaryTileset, this->secondaryTileset, this->paletteId, true).scaled(16, 16);
-        } else if (tile < Project::getNumTilesPrimary()) {
+        } else if (tile < primaryTileset->getNumTiles()) {
             tileImage = QImage(16, 16, QImage::Format_RGBA8888);
             tileImage.fill(palette.at(0));
-        } else if (tile < Project::getNumTilesPrimary() + secondaryLength) {
+        } else if (tile < primaryTileset->getNumTiles() + secondaryLength) {
             tileImage = getPalettedTileImage(tile, this->primaryTileset, this->secondaryTileset, this->paletteId, true).scaled(16, 16);
         } else {
             tileImage = QImage(16, 16, QImage::Format_RGBA8888);
@@ -263,7 +263,7 @@ QImage TilesetEditorTileSelector::buildSecondaryTilesIndexedImage() {
     QImage image(this->numTilesWide * 8, height * 8, QImage::Format_RGBA8888);
 
     QPainter painter(&image);
-    uint16_t primaryLength = static_cast<uint16_t>(Project::getNumTilesPrimary());
+    uint16_t primaryLength = static_cast<uint16_t>(primaryTileset->getNumTiles());
     for (uint16_t tile = 0; tile < secondaryLength; tile++) {
         QImage tileImage;
         if (tile < secondaryLength) {

@@ -241,7 +241,7 @@ void PaletteEditor::setBitDepth(int bits) {
 void PaletteEditor::setRgb(int colorIndex, QRgb rgb) {
     int paletteNum = this->ui->spinBox_PaletteId->value();
 
-    Tileset *tileset = paletteNum < Project::getNumPalettesPrimary()
+    Tileset *tileset = paletteNum < primaryTileset->getNumPalettes()
             ? this->primaryTileset
             : this->secondaryTileset;
     tileset->palettes[paletteNum][colorIndex] = rgb;
@@ -296,7 +296,7 @@ void PaletteEditor::refreshColorUis() {
     int paletteNum = this->ui->spinBox_PaletteId->value();
     for (int i = 0; i < 16; i++) {
         QRgb color;
-        if (paletteNum < Project::getNumPalettesPrimary()) {
+        if (paletteNum < primaryTileset->getNumPalettes()) {
             color = this->primaryTileset->palettes.at(paletteNum).at(i);
         } else {
             color = this->secondaryTileset->palettes.at(paletteNum).at(i);
@@ -370,7 +370,7 @@ void PaletteEditor::setColorsFromHistory(PaletteHistoryItem *history, int palett
     if (!history) return;
 
     for (int i = 0; i < 16; i++) {
-        if (paletteId < Project::getNumPalettesPrimary()) {
+        if (paletteId < primaryTileset->getNumPalettes()) {
             this->primaryTileset->palettes[paletteId][i] = history->colors.at(i);
             this->primaryTileset->palettePreviews[paletteId][i] = history->colors.at(i);
         } else {
@@ -420,7 +420,7 @@ void PaletteEditor::on_actionImport_Palette_triggered()
 
     int paletteId = this->ui->spinBox_PaletteId->value();
     for (int i = 0; i < 16; i++) {
-        if (paletteId < Project::getNumPalettesPrimary()) {
+        if (paletteId < primaryTileset->getNumPalettes()) {
             this->primaryTileset->palettes[paletteId][i] = palette.at(i);
             this->primaryTileset->palettePreviews[paletteId][i] = palette.at(i);
         } else {

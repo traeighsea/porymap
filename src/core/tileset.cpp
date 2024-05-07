@@ -67,7 +67,7 @@ Tileset &Tileset::operator=(const Tileset &other) {
 }
 
 Tileset* Tileset::getTileTileset(int tileId, Tileset *primaryTileset, Tileset *secondaryTileset) {
-    if (tileId < Project::getNumTilesPrimary()) {
+    if (tileId < primaryTileset->getNumTiles()) {
         return primaryTileset;
     } else if (tileId < Project::getNumTilesTotal()) {
         return secondaryTileset;
@@ -77,7 +77,7 @@ Tileset* Tileset::getTileTileset(int tileId, Tileset *primaryTileset, Tileset *s
 }
 
 Tileset* Tileset::getMetatileTileset(int metatileId, Tileset *primaryTileset, Tileset *secondaryTileset) {
-    if (metatileId < Project::getNumMetatilesPrimary()) {
+    if (metatileId < primaryTileset->getNumMetatiles()) {
         return primaryTileset;
     } else if (metatileId < Project::getNumMetatilesTotal()) {
         return secondaryTileset;
@@ -91,7 +91,8 @@ Metatile* Tileset::getMetatile(int metatileId, Tileset *primaryTileset, Tileset 
     if (!tileset) {
         return nullptr;
     }
-    int index = Metatile::getIndexInTileset(metatileId);
+
+    int index = metatileId < primaryTileset->getNumMetatiles() ? metatileId : metatileId - primaryTileset->getNumMetatiles();
     return tileset->metatiles.value(index, nullptr);
 }
 
@@ -101,7 +102,7 @@ Metatile* Tileset::getMetatile(int metatileId, Tileset *primaryTileset, Tileset 
 Tileset* Tileset::getMetatileLabelTileset(int metatileId, Tileset *primaryTileset, Tileset *secondaryTileset) {
     Tileset *mainTileset = nullptr;
     Tileset *alternateTileset = nullptr;
-    if (metatileId < Project::getNumMetatilesPrimary()) {
+    if (metatileId < primaryTileset->getNumMetatiles()) {
         mainTileset = primaryTileset;
         alternateTileset = secondaryTileset;
     } else if (metatileId < Project::getNumMetatilesTotal()) {
@@ -125,7 +126,8 @@ MetatileLabelPair Tileset::getMetatileLabelPair(int metatileId, Tileset *primary
     QString primaryMetatileLabel = primaryTileset ? primaryTileset->metatileLabels.value(metatileId) : "";
     QString secondaryMetatileLabel = secondaryTileset ? secondaryTileset->metatileLabels.value(metatileId) : "";
 
-    if (metatileId < Project::getNumMetatilesPrimary()) {
+    // TODO(@traeighsea): use numMetatiles in tileset
+    if (metatileId < primaryTileset->getNumMetatiles()) {
         labels.owned = primaryMetatileLabel;
         labels.shared = secondaryMetatileLabel;
     } else if (metatileId < Project::getNumMetatilesTotal()) {
@@ -181,10 +183,10 @@ bool Tileset::metatileIsValid(uint16_t metatileId, Tileset *primaryTileset, Tile
     if (metatileId >= Project::getNumMetatilesTotal())
         return false;
 
-    if (metatileId < Project::getNumMetatilesPrimary() && metatileId >= primaryTileset->metatiles.length())
+    if (metatileId < primaryTileset->getNumMetatiles() && metatileId >= primaryTileset->metatiles.length())
         return false;
 
-    if (metatileId >= Project::getNumMetatilesPrimary() + secondaryTileset->metatiles.length())
+    if (metatileId >= primaryTileset->getNumMetatiles() + secondaryTileset->metatiles.length())
         return false;
 
     return true;
@@ -193,11 +195,11 @@ bool Tileset::metatileIsValid(uint16_t metatileId, Tileset *primaryTileset, Tile
 QList<QList<QRgb>> Tileset::getBlockPalettes(Tileset *primaryTileset, Tileset *secondaryTileset, bool useTruePalettes) {
     QList<QList<QRgb>> palettes;
     auto primaryPalettes = useTruePalettes ? primaryTileset->palettes : primaryTileset->palettePreviews;
-    for (int i = 0; i < Project::getNumPalettesPrimary(); i++) {
+    for (int i = 0; i < primaryTileset->getNumPalettes(); i++) {
         palettes.append(primaryPalettes.at(i));
     }
     auto secondaryPalettes = useTruePalettes ? secondaryTileset->palettes : secondaryTileset->palettePreviews;
-    for (int i = Project::getNumPalettesPrimary(); i < Project::getNumPalettesTotal(); i++) {
+    for (int i = primaryTileset->getNumPalettes(); i < Project::getNumPalettesTotal(); i++) {
         palettes.append(secondaryPalettes.at(i));
     }
     return palettes;
@@ -205,7 +207,7 @@ QList<QList<QRgb>> Tileset::getBlockPalettes(Tileset *primaryTileset, Tileset *s
 
 QList<QRgb> Tileset::getPalette(int paletteId, Tileset *primaryTileset, Tileset *secondaryTileset, bool useTruePalettes) {
     QList<QRgb> paletteTable;
-    Tileset *tileset = paletteId < Project::getNumPalettesPrimary()
+    Tileset *tileset = paletteId < primaryTileset->getNumPalettes()
             ? primaryTileset
             : secondaryTileset;
     auto palettes = useTruePalettes ? tileset->palettes : tileset->palettePreviews;
@@ -372,4 +374,28 @@ QHash<int, QString> Tileset::getHeaderMemberMap(bool usingAsm)
     map.insert(4 + paddingOffset, "metatiles");
     map.insert(metatileAttrPosition, "metatileAttributes");
     return map;
+}
+
+int Tileset::getNumMetatiles() const {
+    if (numMetatiles) {
+        return *numMetatiles;
+    } else {
+        return is_secondary ? Project::getNumMetatilesTotal() - Project::getNumMetatilesPrimary() : Project::getNumMetatilesPrimary();
+    }
+}
+
+int Tileset::getNumTiles() const {
+    if (numTiles) {
+        return *numTiles;
+    } else {
+        return is_secondary ? Project::getNumTilesTotal() - Project::getNumTilesPrimary() : Project::getNumTilesPrimary();
+    }
+}
+
+int Tileset::getNumPalettes() const {
+    if (numPals) {
+        return *numPals;
+    } else {
+        return is_secondary ? Project::getNumPalettesTotal() - Project::getNumPalettesPrimary() : Project::getNumPalettesPrimary();
+    }
 }

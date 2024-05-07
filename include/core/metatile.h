@@ -89,7 +89,6 @@ public:
     void setEncounterType(int value) { this->setAttribute(Attr::EncounterType, static_cast<uint32_t>(value)); }
     void setLayerType(int value)     { this->setAttribute(Attr::LayerType, static_cast<uint32_t>(value)); }
 
-    static int getIndexInTileset(int);
     static QPoint coordFromPixmapCoord(const QPointF &pixelCoord);
     static uint32_t getDefaultAttributesMask(BaseGameVersion version, Metatile::Attr attr);
     static uint32_t getMaxAttributesMask();
