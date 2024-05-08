@@ -109,12 +109,9 @@ public:
     QStringList tilesetLabelsOrdered;
 
     Blockdata readBlockdata(QString);
+    Blockdata readBlockdataFromJson(QString);
     bool loadBlockdata(MapLayout*);
     bool loadLayoutBorder(MapLayout*);
-
-    Blockdata readBlockdataFromJson(QString);
-    bool loadBlockdataFromJson(MapLayout*);
-    bool loadLayoutBorderFromJson(MapLayout*);
 
     void saveTextFile(QString path, QString text);
     void appendTextFile(QString path, QString text);
@@ -154,8 +151,6 @@ public:
     void saveLayoutBlockdata(Map*);
     void saveLayoutBorder(Map*);
     void writeBlockdata(QString, const Blockdata &);
-    void saveLayoutBlockdataAsJson(Map*);
-    void saveLayoutBorderAsJson(Map*);
     void writeBlockdataAsJson(QString, const Blockdata &);
     void saveAllMaps();
     void saveMap(Map*);

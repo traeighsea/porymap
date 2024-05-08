@@ -786,7 +786,6 @@ void TilesetEditor::on_actionChange_Metatiles_Count_triggered()
     QSpinBox *secondarySpinBox = new QSpinBox();
     primarySpinBox->setMinimum(1);
     secondarySpinBox->setMinimum(1);
-    // TODO(@traeighsea): use numMetatiles in tileset
     primarySpinBox->setMaximum(primaryTileset->getNumMetatiles());
     secondarySpinBox->setMaximum(Project::getNumMetatilesTotal() - primaryTileset->getNumMetatiles());
     primarySpinBox->setValue(this->primaryTileset->metatiles.length());

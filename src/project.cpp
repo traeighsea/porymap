@@ -430,8 +430,8 @@ QString Project::readMapLocation(QString map_name) {
 bool Project::loadLayout(MapLayout *layout) {
     // Force these to run even if one fails
     bool loadedTilesets = loadLayoutTilesets(layout);
-    bool loadedBlockdata = (projectConfig.getLayoutStoreMapDataAsJsonEnabled()) ? loadBlockdataFromJson(layout) : loadBlockdata(layout);
-    bool loadedBorder = (projectConfig.getLayoutStoreMapDataAsJsonEnabled()) ? loadLayoutBorderFromJson(layout) : loadLayoutBorder(layout);
+    bool loadedBlockdata = loadBlockdata(layout);
+    bool loadedBorder = loadLayoutBorder(layout);
 
     return loadedTilesets 
         && loadedBlockdata 
@@ -1036,7 +1036,6 @@ void Project::writeTilesetMetatiles(QString path, const QList<Metatile *>& metat
         }
         metatiles_file.write(data);
     } else {
-        // TODO(@Traeighsea): Verify we don't need to clear here: metatiles.clear();
         logError(QString("Could not open tileset metatiles file '%1'").arg(path));
     }
 }
@@ -1062,7 +1061,6 @@ void Project::writeTilesetMetatilesAsJson(QString path, Tileset* tileset) {
     if (metatilesFile.open(QIODevice::WriteOnly)) {
         OrderedJson::object metatilesObj;
 
-        // We want to describe how the data is serialized, which can ignore project wide settings
         int numMetatiles = tileset->getNumMetatiles();
         metatilesObj["numMetatiles"] = numMetatiles;
 
@@ -1111,16 +1109,13 @@ void Project::writeTilesetMetatileAttributesAsJson(QString path,
     if (metatileAttrFile.open(QIODevice::WriteOnly)) {      
         OrderedJson::object metatilesObj;
 
-        // We want to describe how the data is serialized, which can ignore project wide settings
         int numMetatiles = tileset->getNumMetatiles();
         metatilesObj["numMetatiles"] = numMetatiles;
 
         int metatileAttributeSize = projectConfig.getMetatileAttributesSize() * 8;
-        // TODO(@traeighsea): Add something to retain the attribute sizes and masks for "custom" defined packers
         metatilesObj["attributeSizeInBits"] = metatileAttributeSize;
 
         OrderedJson::object attributeMasksObj;
-
         if (tileset->metatileAttrBitMasks) {
             for (auto& key: tileset->metatileAttrBitMasks->keys()){
                 attributeMasksObj[key] = intToHex(tileset->metatileAttrBitMasks->value(key));
@@ -1140,7 +1135,6 @@ void Project::writeTilesetMetatileAttributesAsJson(QString path,
             attributeMasksObj[AttrConsts::LayerTypeStr] = intToHex(layerTypeMask);
             attributeMasksObj[AttrConsts::UnusedStr] = intToHex(unusedMask);
         }
-
         metatilesObj["attributeMasks"] = attributeMasksObj;
 
         OrderedJson::array metatileAttrArr;
@@ -1245,8 +1239,8 @@ Tileset* Project::loadTileset(QString label, Tileset *tileset) {
         tileset->palettes_label = tilesetAttributes.value("palettes");
         tileset->metatiles_label = tilesetAttributes.value("metatiles");
         tileset->metatile_attrs_label = tilesetAttributes.value("metatileAttributes");
-        // TODO(@traeighsea): Should we get the numTiles here or from the json?
-        // tileset->numMetatiles = tilesetAttributes.value("numTiles");
+        // TODO(@traeighsea): Should we get the numMetatiles, numTiles, and numPalettes here or from the json?
+        // tileset->numMetatiles = tilesetAttributes.value("numMetatiles");
     }
 
     loadTilesetAssets(tileset);
@@ -1257,24 +1251,9 @@ Tileset* Project::loadTileset(QString label, Tileset *tileset) {
 
 bool Project::loadBlockdata(MapLayout *layout) {
     QString path = QString("%1/%2").arg(root).arg(layout->blockdata_path);
-    layout->blockdata = readBlockdata(path);
-    layout->lastCommitBlocks.blocks = layout->blockdata;
-    layout->lastCommitBlocks.mapDimensions = QSize(layout->getWidth(), layout->getHeight());
+    auto isJsonFileExtension = getFileExtensionFromPath(path) == "json";
 
-    if (layout->blockdata.count() != layout->getWidth() * layout->getHeight()) {
-        logWarn(QString("Layout blockdata length %1 does not match dimensions %2x%3 (should be %4). Resizing blockdata.")
-                .arg(layout->blockdata.count())
-                .arg(layout->getWidth())
-                .arg(layout->getHeight())
-                .arg(layout->getWidth() * layout->getHeight()));
-        layout->blockdata.resize(layout->getWidth() * layout->getHeight());
-    }
-    return true;
-}
-
-bool Project::loadBlockdataFromJson(MapLayout *layout) {
-    QString path = QString("%1/%2").arg(root).arg(layout->blockdata_path);
-    layout->blockdata = readBlockdataFromJson(path);
+    layout->blockdata = projectConfig.getLayoutStoreMapDataAsJsonEnabled() && isJsonFileExtension ? readBlockdataFromJson(path) : readBlockdata(path);
     layout->lastCommitBlocks.blocks = layout->blockdata;
     layout->lastCommitBlocks.mapDimensions = QSize(layout->getWidth(), layout->getHeight());
 
@@ -1303,25 +1282,9 @@ void Project::setNewMapBlockdata(Map *map) {
 
 bool Project::loadLayoutBorder(MapLayout *layout) {
     QString path = QString("%1/%2").arg(root).arg(layout->border_path);
-    layout->border = readBlockdata(path);
-    layout->lastCommitBlocks.border = layout->border;
-    layout->lastCommitBlocks.borderDimensions = QSize(layout->getBorderWidth(), layout->getBorderHeight());
+    auto isJsonFileExtension = getFileExtensionFromPath(path) == "json";
 
-    int borderLength = layout->getBorderWidth() * layout->getBorderHeight();
-    if (layout->border.count() != borderLength) {
-        logWarn(QString("Layout border blockdata length %1 must be %2. Resizing border blockdata.")
-                .arg(layout->border.count())
-                .arg(borderLength));
-        layout->border.resize(borderLength);
-    }
-    return true;
-}
-
-bool Project::loadLayoutBorderFromJson(MapLayout *layout) {
-    QString path = QString("%1/%2").arg(root).arg(layout->border_path);
-    // TODO(@traeighsea): update to check file extension
-
-    layout->border = readBlockdataFromJson(path);
+    layout->border = projectConfig.getLayoutStoreMapDataAsJsonEnabled() && isJsonFileExtension ? readBlockdataFromJson(path) : readBlockdata(path);
     layout->lastCommitBlocks.border = layout->border;
     layout->lastCommitBlocks.borderDimensions = QSize(layout->getBorderWidth(), layout->getBorderHeight());
 
@@ -1360,12 +1323,22 @@ void Project::setNewMapBorder(Map *map) {
 
 void Project::saveLayoutBorder(Map *map) {
     QString path = QString("%1/%2").arg(root).arg(map->layout->border_path);
-    writeBlockdata(path, map->layout->border);
+    auto isJsonFileExtension = getFileExtensionFromPath(path) == "json";
+    if (projectConfig.getLayoutStoreMapDataAsJsonEnabled() && isJsonFileExtension) {
+        writeBlockdataAsJson(path, map->layout->border);
+    } else {
+        writeBlockdata(path, map->layout->border);
+    }
 }
 
 void Project::saveLayoutBlockdata(Map* map) {
     QString path = QString("%1/%2").arg(root).arg(map->layout->blockdata_path);
-    writeBlockdata(path, map->layout->blockdata);
+    auto isJsonFileExtension = getFileExtensionFromPath(path) == "json";
+    if (projectConfig.getLayoutStoreMapDataAsJsonEnabled() && isJsonFileExtension) {
+        writeBlockdataAsJson(path, map->layout->blockdata);
+    } else {
+        writeBlockdata(path, map->layout->blockdata);
+    }
 }
 
 void Project::writeBlockdata(QString path, const Blockdata &blockdata) {
@@ -1378,16 +1351,6 @@ void Project::writeBlockdata(QString path, const Blockdata &blockdata) {
     }
 }
 
-void Project::saveLayoutBorderAsJson(Map *map) {
-    QString path = QString("%1/%2").arg(root).arg(map->layout->border_path);
-    writeBlockdataAsJson(path, map->layout->border);
-}
-
-void Project::saveLayoutBlockdataAsJson(Map* map) {
-    QString path = QString("%1/%2").arg(root).arg(map->layout->blockdata_path);
-    writeBlockdataAsJson(path, map->layout->blockdata);
-}
-
 void Project::writeBlockdataAsJson(QString path, const Blockdata &blockdata) {
     QFile file(path);
 
@@ -1397,13 +1360,12 @@ void Project::writeBlockdataAsJson(QString path, const Blockdata &blockdata) {
     }
     OrderedJson::object mapObj;
 
-    // TODO(@traeighsea): This may be _too_ redundant. Does someone want this as a feature??
     mapObj["mapgridSizeInBits"] = 16;
 
     OrderedJson::object mapgridMasksObj;
-    mapgridMasksObj["metatileIdMask"] = intToHex(projectConfig.getBlockMetatileIdMask());
-    mapgridMasksObj["collisionMask"] = intToHex(projectConfig.getBlockCollisionMask());
-    mapgridMasksObj["elevationMask"] = intToHex(projectConfig.getBlockElevationMask());
+    mapgridMasksObj["metatileId"] = intToHex(projectConfig.getBlockMetatileIdMask());
+    mapgridMasksObj["collision"] = intToHex(projectConfig.getBlockCollisionMask());
+    mapgridMasksObj["elevation"] = intToHex(projectConfig.getBlockElevationMask());
     mapObj["mapgridMasks"] = mapgridMasksObj;
 
     OrderedJson::array blocksArr;
@@ -1565,16 +1527,8 @@ void Project::saveMap(Map *map) {
     jsonDoc.dump(&mapFile);
     mapFile.close();
 
-    if (projectConfig.getLayoutStoreMapDataAsJsonEnabled()) {
-        // TODO(@traeighsea): check the files and convert to json file extension
-        // Create file data/layouts/<map_name>/border.json
-        saveLayoutBorderAsJson(map);
-        // Create file data/layouts/<map_name>/map.json
-        saveLayoutBlockdataAsJson(map);
-    } else {
-        saveLayoutBorder(map);
-        saveLayoutBlockdata(map);
-    }
+    saveLayoutBorder(map);
+    saveLayoutBlockdata(map);
     saveHealLocations(map);
 
     // Update global data structures with current map data.
@@ -1827,7 +1781,6 @@ void Project::readTilesetMetatilesFromJson(QString path, Tileset* tileset) {
     QJsonArray metatilesArr = metatilesObj["metatiles"].toArray();
     if (metatilesArr.size() == 0) {
         logError(QString("'metatiles' array is missing from %1.").arg(path));
-        // TODO(@Traeighsea): Figure out the best way to error out or keep it going for these returns
         return;
     }
 
@@ -1909,28 +1862,24 @@ void Project::readTilesetMetatilesFromJson(QString path, Tileset* tileset) {
 
             tile.tileId = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["tileId"], &succeeded));
             if (!succeeded) {
-                // TODO(traeighsea): Update to check size of read in value
                 logError(QString("Missing 'tileId' value on layout %1 in %2").arg(i).arg(path));
                 return;
             }
 
             tile.xflip = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["xflip"], &succeeded));
             if (!succeeded) {
-                // TODO(traeighsea): Update to check size of read in value
                 logError(QString("Missing 'xflip' value on layout %1 in %2").arg(i).arg(path));
                 return;
             }
 
             tile.yflip = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["yflip"], &succeeded));
             if (!succeeded) {
-                // TODO(traeighsea): Update to check size of read in value
                 logError(QString("Missing 'yflip' value on layout %1 in %2").arg(i).arg(path));
                 return;
             }
 
             tile.palette = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["palette"], &succeeded));
             if (!succeeded) {
-                // TODO(traeighsea): Update to check size of read in value
                 logError(QString("Missing 'palette' value on layout %1 in %2").arg(i).arg(path));
                 return;
             }
@@ -1968,9 +1917,6 @@ void Project::readTilesetMetatileAttributesFromJson(QString path, Tileset* tiles
         }
     }
 
-    // TODO(@traeighsea): Use the attributeSizeInBits
-    //auto attributeSizeInBits = metatilesObj["attributeSizeInBits"].toInt();
-
     QJsonObject attributeMasksObj = metatilesObj["attributeMasks"].toObject();
 
     tileset->metatileAttrBitMasks = QMap<QString, uint32_t>();
@@ -1987,14 +1933,13 @@ void Project::readTilesetMetatileAttributesFromJson(QString path, Tileset* tiles
     QJsonArray metatileAttrArr = metatilesObj["metatileAttributes"].toArray();
     if (metatileAttrArr.size() == 0) {
         logError(QString("'metatileAttributes' array is missing from %1.").arg(path));
-        // TODO(@Traeighsea): Figure out the best way to error out or keep it going for these returns
         return;
     }
 
     for (int i = 0; i < metatileAttrArr.size(); i++) {
         QJsonObject metatileAttrObj = metatileAttrArr[i].toObject();
         if (metatileAttrObj.isEmpty()) {
-            // TODO(@Traeighsea): Log an error
+            logError(QString("Issue parsing metatile attribute index %1 from %2.").arg(i).arg(path));
             continue;
         }
 
@@ -2008,10 +1953,9 @@ void Project::readTilesetMetatileAttributesFromJson(QString path, Tileset* tiles
             bool succeeded{true};
             auto attrVal = static_cast<uint32_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
             if (!succeeded) {
-                logError(QString("Issue parsing metatile attribute %1 index %2 in %3.").arg(key).arg(i).arg(path));
+                logError(QString("Issue parsing metatile attribute %1 index %2 from %3.").arg(key).arg(i).arg(path));
                 continue;
             }
-            // TODO(@traeighsea): Should we check their value is within the declared mask range and log a warning?
 
             // Special case unused because we wanna preserve the data
             if (key == "unused") {
@@ -2124,21 +2068,18 @@ Blockdata Project::readBlockdataFromJson(QString path) {
         bool succeeded{true};
         block.setMetatileId(ParseUtil::jsonToInt(blockDataObj["metatileId"], &succeeded));
         if (!succeeded) {
-            // TODO(traeighsea): Update to check size of read in value
             logError(QString("Missing 'metatileId' value on layout %1 in %2").arg(i).arg(path));
             return blockdata;
         }
 
         block.setCollision(ParseUtil::jsonToInt(blockDataObj["collision"], &succeeded));
         if (!succeeded) {
-            // TODO(traeighsea): Update to check size of read in value
             logError(QString("Missing 'collision' value on layout %1 in %2").arg(i).arg(path));
             return blockdata;
         }
 
         block.setElevation(ParseUtil::jsonToInt(blockDataObj["elevation"], &succeeded));
         if (!succeeded) {
-            // TODO(traeighsea): Update to check size of read in value
             logError(QString("Missing 'elevation' value on layout %1 in %2").arg(i).arg(path));
             return blockdata;
         }

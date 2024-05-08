@@ -213,7 +213,6 @@ QPoint MetatileSelector::getMetatileIdCoords(uint16_t metatileId) {
         return QPoint(0, 0);
     }
 
-    // TODO(@traeighsea): use numMetatiles in tileset
     int index = metatileId < primaryTileset->getNumMetatiles()
                 ? metatileId
                 : metatileId - primaryTileset->getNumMetatiles() + this->primaryTileset->metatiles.length();

@@ -126,7 +126,6 @@ MetatileLabelPair Tileset::getMetatileLabelPair(int metatileId, Tileset *primary
     QString primaryMetatileLabel = primaryTileset ? primaryTileset->metatileLabels.value(metatileId) : "";
     QString secondaryMetatileLabel = secondaryTileset ? secondaryTileset->metatileLabels.value(metatileId) : "";
 
-    // TODO(@traeighsea): use numMetatiles in tileset
     if (metatileId < primaryTileset->getNumMetatiles()) {
         labels.owned = primaryMetatileLabel;
         labels.shared = secondaryMetatileLabel;
