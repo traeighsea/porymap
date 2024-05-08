@@ -85,6 +85,15 @@ void ProjectSettingsEditor::connectSignals() {
         connect(spinBox, &QSpinBox::textChanged, this, &ProjectSettingsEditor::markEdited);
     for (auto spinBox : ui->centralwidget->findChildren<UIntSpinBox *>())
         connect(spinBox, &UIntSpinBox::textChanged, this, &ProjectSettingsEditor::markEdited);
+
+    auto fnSetEnablesForTilesetStoreMetatileDataAsJson = [this](int enabled){
+        ui->checkBox_TilesetVariableNumMetatiles->setEnabled(enabled);
+        ui->checkBox_TilesetVariableNumTiles->setEnabled(enabled);
+        ui->checkBox_TilesetVariableNumPalettes->setEnabled(enabled);
+    };
+    connect(ui->checkBox_TilesetStoreMetatileDataAsJson, &QCheckBox::stateChanged, this, fnSetEnablesForTilesetStoreMetatileDataAsJson);
+    // init states
+    fnSetEnablesForTilesetStoreMetatileDataAsJson(ui->checkBox_TilesetStoreMetatileDataAsJson->isChecked());
 }
 
 void ProjectSettingsEditor::markEdited() {

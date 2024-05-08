@@ -985,6 +985,15 @@
                     </property>
                    </widget>
                   </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="groupBox_TilesetMetatileJsonOptions">
+                 <property name="title">
+                  <string>Store Metatiles as Json</string>
+                 </property>
+                 <layout class="QVBoxLayout" name="verticalLayout_14">
                   <item>
                    <widget class="QCheckBox" name="checkBox_TilesetStoreMetatileDataAsJson">
                     <property name="toolTip">
