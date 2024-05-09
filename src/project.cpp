@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <string>
+#include <sstream>
 
 using OrderedJson = poryjson::Json;
 using OrderedJsonDoc = poryjson::JsonDoc;
