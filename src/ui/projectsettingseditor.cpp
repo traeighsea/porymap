@@ -437,6 +437,7 @@ void ProjectSettingsEditor::refresh() {
     // Set check box states
     ui->checkBox_UsePoryscript->setChecked(projectConfig.getUsePoryScript());
     ui->checkBox_ShowWildEncounterTables->setChecked(userConfig.getEncounterJsonActive());
+    ui->checkBox_EnableStoreWildEncountersPerMap->setChecked(projectConfig.getStoreWildEncountersPerMapEnabled());
     ui->checkBox_CreateTextFile->setChecked(projectConfig.getCreateMapTextFileEnabled());
     ui->checkBox_EnableTripleLayerMetatiles->setChecked(projectConfig.getTripleLayerMetatilesEnabled());
     ui->checkBox_EnableRequiresItemfinder->setChecked(projectConfig.getHiddenItemRequiresItemfinderEnabled());
@@ -512,6 +513,7 @@ void ProjectSettingsEditor::save() {
     // Save check box settings
     projectConfig.setUsePoryScript(ui->checkBox_UsePoryscript->isChecked());
     userConfig.setEncounterJsonActive(ui->checkBox_ShowWildEncounterTables->isChecked());
+    projectConfig.setStoreWildEncountersPerMapEnabled(ui->checkBox_EnableStoreWildEncountersPerMap->isChecked());
     projectConfig.setCreateMapTextFileEnabled(ui->checkBox_CreateTextFile->isChecked());
     projectConfig.setTripleLayerMetatilesEnabled(ui->checkBox_EnableTripleLayerMetatiles->isChecked());
     projectConfig.setHiddenItemRequiresItemfinderEnabled(ui->checkBox_EnableRequiresItemfinder->isChecked());

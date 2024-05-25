@@ -706,6 +706,25 @@
                  </layout>
                 </widget>
                </item>
+               <item>
+                <widget class="QGroupBox" name="groupBox_MapWildEncounters">
+                 <property name="title">
+                  <string>Wild Encounters</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout">
+                  <item row="0" column="0">
+                   <widget class="QCheckBox" name="checkBox_EnableStoreWildEncountersPerMap">
+                    <property name="toolTip">
+                     <string>Whether to enable wild encounters stored in the map directories as opposed to a single json file.</string>
+                    </property>
+                    <property name="text">
+                     <string>Enable Store Wild Encounters per Map</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
               </layout>
              </widget>
             </item>

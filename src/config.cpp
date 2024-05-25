@@ -896,6 +896,8 @@ void ProjectConfig::parseConfigKeyValue(QString key, QString value) {
             logWarn(QString("Invalid config value for base_game_version: '%1'. Must be 'pokeruby', 'pokefirered' or 'pokeemerald'.").arg(value));
     } else if (key == "use_poryscript") {
         this->usePoryScript = getConfigBool(key, value);
+    } else if (key == "enable_store_wild_encounters_per_map") {
+        this->enableStoreWildEncountersPerMap = getConfigBool(key, value);
     } else if (key == "use_custom_border_size") {
         this->useCustomBorderSize = getConfigBool(key, value);
     } else if (key == "enable_event_weather_trigger") {
@@ -1051,6 +1053,7 @@ QMap<QString, QString> ProjectConfig::getKeyValueMap() {
     QMap<QString, QString> map;
     map.insert("base_game_version", baseGameVersionMap.value(this->baseGameVersion));
     map.insert("use_poryscript", QString::number(this->usePoryScript));
+    map.insert("enable_store_wild_encounters_per_map", QString::number(this->enableStoreWildEncountersPerMap));
     map.insert("use_custom_border_size", QString::number(this->useCustomBorderSize));
     map.insert("enable_event_weather_trigger", QString::number(this->enableEventWeatherTrigger));
     map.insert("enable_event_secret_base", QString::number(this->enableEventSecretBase));
@@ -1235,6 +1238,15 @@ void ProjectConfig::setUsePoryScript(bool usePoryScript) {
 
 bool ProjectConfig::getUsePoryScript() {
     return this->usePoryScript;
+}
+
+void ProjectConfig::setStoreWildEncountersPerMapEnabled(bool enable) {
+    this->enableStoreWildEncountersPerMap = enable;
+    this->save();
+}
+
+bool ProjectConfig::getStoreWildEncountersPerMapEnabled() const {
+    return this->enableStoreWildEncountersPerMap;
 }
 
 void ProjectConfig::setUseCustomBorderSize(bool enable) {

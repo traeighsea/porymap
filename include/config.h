@@ -330,6 +330,7 @@ public:
         this->baseGameVersion = BaseGameVersion::pokeemerald;
         // Reset non-version-specific settings
         this->usePoryScript = false;
+        this->enableStoreWildEncountersPerMap = false;
         this->enableTripleLayerMetatiles = false;
         this->defaultMetatileId = 1;
         this->defaultElevation = 3;
@@ -362,6 +363,8 @@ public:
     BaseGameVersion stringToBaseGameVersion(QString string, bool * ok = nullptr);
     void setUsePoryScript(bool usePoryScript);
     bool getUsePoryScript();
+    void setStoreWildEncountersPerMapEnabled(bool enable);
+    bool getStoreWildEncountersPerMapEnabled() const;
     void setProjectDir(QString projectDir);
     QString getProjectDir();
     void setUseCustomBorderSize(bool enable);
@@ -460,6 +463,7 @@ private:
     QMap<ProjectIdentifier, QString> identifiers;
     QMap<ProjectFilePath, QString> filePaths;
     bool usePoryScript;
+    bool enableStoreWildEncountersPerMap;
     bool useCustomBorderSize;
     bool enableEventWeatherTrigger;
     bool enableEventSecretBase;
