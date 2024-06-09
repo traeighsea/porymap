@@ -1150,7 +1150,7 @@ void Project::writeTilesetMetatileAttributesAsJson(QString path,
 
             metatileAttrArr.push_back(metatileObj);
         }
-        metatilesObj["metatileAttributes"] = metatileAttrArr;
+        metatilesObj["metatiles"] = metatileAttrArr;
 
         OrderedJson metatileAttrsJson(metatilesObj);
         OrderedJsonDoc jsonDoc(&metatileAttrsJson);
@@ -1240,8 +1240,6 @@ Tileset* Project::loadTileset(QString label, Tileset *tileset) {
         tileset->palettes_label = tilesetAttributes.value("palettes");
         tileset->metatiles_label = tilesetAttributes.value("metatiles");
         tileset->metatile_attrs_label = tilesetAttributes.value("metatileAttributes");
-        // TODO(@traeighsea): Should we get the numMetatiles, numTiles, and numPalettes here or from the json?
-        // tileset->numMetatiles = tilesetAttributes.value("numMetatiles");
     }
 
     loadTilesetAssets(tileset);
@@ -1931,9 +1929,9 @@ void Project::readTilesetMetatileAttributesFromJson(QString path, Tileset* tiles
         metatileAttrPacker->insert(key, bitmask);
     }
 
-    QJsonArray metatileAttrArr = metatilesObj["metatileAttributes"].toArray();
+    QJsonArray metatileAttrArr = metatilesObj["metatiles"].toArray();
     if (metatileAttrArr.size() == 0) {
-        logError(QString("'metatileAttributes' array is missing from %1.").arg(path));
+        logError(QString("'metatiles' array is missing from %1.").arg(path));
         return;
     }
 
