@@ -415,7 +415,7 @@ void MainWindow::setProjectSpecificUI()
 {
     // Wild Encounters tab
     // TODO: This index should come from an enum
-    ui->mainTabBar->setTabEnabled(4, editor->project->wildEncountersLoaded);
+    ui->mainTabBar->setTabEnabled(4, editor->project->wildEncountersEagerLoaded || projectConfig.getStoreWildEncountersPerMapEnabled());
 
     bool hasFlags = projectConfig.getMapAllowFlagsEnabled();
     ui->checkBox_AllowRunning->setVisible(hasFlags);
@@ -1009,7 +1009,8 @@ bool MainWindow::loadDataStructures() {
                 && project->readHealLocations()
                 && project->readMiscellaneousConstants()
                 && project->readSpeciesIconPaths()
-                && project->readWildMonData()
+                // If individual wild encounters files enabled, we won't eager load the wild encounters
+                && projectConfig.getStoreWildEncountersPerMapEnabled() ? true : project->readWildMonData()
                 && project->readEventScriptLabels()
                 && project->readObjEventGfxConstants()
                 && project->readEventGraphics()
@@ -1827,7 +1828,7 @@ void MainWindow::on_mainTabBar_tabBarClicked(int index)
         editor->setEditingConnections();
     }
     if (index != 4) {
-        if (editor->project && editor->project->wildEncountersLoaded)
+        if (editor->project && (editor->project->wildEncountersEagerLoaded || projectConfig.getStoreWildEncountersPerMapEnabled()))
             editor->saveEncounterTabData();
     }
     if (index != 1) {

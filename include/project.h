@@ -79,7 +79,7 @@ public:
     bool usingAsmTilesets;
     QString importExportPath;
     QSet<QString> disabledSettingsNames;
-    bool wildEncountersLoaded;
+    bool wildEncountersEagerLoaded;
 
     void set_root(QString);
 
@@ -124,6 +124,7 @@ public:
     QString readMapLayoutId(QString map_name);
     QString readMapLocation(QString map_name);
 
+    bool readIndividualWildMonData();
     bool readWildMonData();
     tsl::ordered_map<QString, tsl::ordered_map<QString, WildPokemonHeader>> wildMonData;
 

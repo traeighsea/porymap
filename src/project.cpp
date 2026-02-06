@@ -129,6 +129,8 @@ Map* Project::loadMap(QString map_name) {
         map->setName(map_name);
     }
 
+    // TODO(@traeighsea): Load encounter map here if available
+
     if (!(loadMapData(map) && loadMapLayout(map)))
         return nullptr;
 
@@ -614,7 +616,7 @@ void Project::saveMapGroups() {
 }
 
 void Project::saveWildMonData() {
-    if (!this->wildEncountersLoaded) return;
+    if (!this->wildEncountersEagerLoaded) return;
 
     QString wildEncountersJsonFilepath = QString("%1/%2").arg(root).arg(projectConfig.getFilePath(ProjectFilePath::json_wild_encounters));
     QFile wildEncountersFile(wildEncountersJsonFilepath);
@@ -1602,7 +1604,7 @@ bool Project::readWildMonData() {
     wildMonFields.clear();
     wildMonData.clear();
     encounterGroupLabels.clear();
-    this->wildEncountersLoaded = false;
+    this->wildEncountersEagerLoaded = false;
     if (!userConfig.getEncounterJsonActive()) {
         return true;
     }
@@ -1700,7 +1702,7 @@ bool Project::readWildMonData() {
         setDefaultEncounterRate(i.key(), rate);
     }
 
-    this->wildEncountersLoaded = true;
+    this->wildEncountersEagerLoaded = true;
     return true;
 }
 
