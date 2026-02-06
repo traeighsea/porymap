@@ -2538,30 +2538,6 @@ void MainWindow::importMapFromAdvanceMap1_92()
     this->newMapPrompt->init(mapLayout);
 }
 
-void MainWindow::on_actionImport_Map_Data_from_Json_triggered() {
-   importMapDataFromJson();
-}
-
-void MainWindow::on_actionExport_Map_Data_as_Json_triggered() {
-   exportMapDataAsJson();
-}
-
-void MainWindow::on_actionExport_Map_Data_as_Bin_triggered() {
-   exportMapDataAsBin();
-}
-
-void MainWindow::importMapDataFromJson() {
-   editor->project->importMapDataFromJson();
-}
-
-void MainWindow::exportMapDataAsJson() {
-   editor->project->exportMapDataAsJson();
-}
-
-void MainWindow::exportMapDataAsBin() {
-   editor->project->exportMapDataAsBin();
-}
-
 void MainWindow::showExportMapImageWindow(ImageExporterMode mode) {
     if (!editor->project) return;
 
