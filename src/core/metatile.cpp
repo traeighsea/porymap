@@ -48,6 +48,10 @@ Metatile::Attr Metatile::StringToAttrEnum(std::string str) {
     }
 }
 
+Metatile::Attr Metatile::StringToAttrEnum(QString str) {
+    return StringToAttrEnum(str.toStdString());
+}
+
 // TODO(@traeighsea): Check where this is used, update to not use this
 int Metatile::getIndexInTileset(int metatileId) {
     if (metatileId < Project::getNumMetatilesPrimary()) {

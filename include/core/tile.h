@@ -22,6 +22,7 @@ public:
     Qt::Orientations orientation() const;
     void flip(QImage *image) const;
 
+    // TODO(@traeighsea): remove this way of getting the index in the tileset
     static int getIndexInTileset(int);
 
     static const uint16_t maxValue;

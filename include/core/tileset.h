@@ -85,18 +85,21 @@ public:
 
     void clearMetatiles();
     void resizeMetatiles(int newNumMetatiles);
-    int numMetatiles() const { return m_metatiles.length(); }
+    int numMetatiles() const;
     int maxMetatiles() const;
 
+    // TODO(@traeighsea): oh this is gonna get complicated but this technically shouldn't work in the future
     uint16_t firstMetatileId() const;
+    // TODO(@traeighsea): oh this is gonna get complicated but this technically shouldn't work in the future
     uint16_t lastMetatileId() const;
+    // TODO(@traeighsea): oh this is gonna get complicated but this technically shouldn't work in the future
     bool containsMetatileId(uint16_t metatileId) const { return metatileId >= firstMetatileId() && metatileId <= lastMetatileId(); }
 
     uint16_t firstTileId() const;
     uint16_t lastTileId() const;
     bool containsTileId(uint16_t tileId) const { return tileId >= firstTileId() && tileId <= lastTileId(); }
 
-    int numTiles() const { return m_tiles.length(); }
+    int numTiles() const;
     int maxTiles() const;
 
     QImage tileImage(uint16_t tileId) const { return m_tiles.value(Tile::getIndexInTileset(tileId)); }
@@ -106,13 +109,28 @@ public:
 
     static constexpr int maxPalettes() { return 16; }
     static constexpr int numColorsPerPalette() { return 16; }
+    
+    void setNumPalettes(unsigned numPals);
+    unsigned getNumPalettes() const;
 
+    void setMetatileAttrBitMasks(const QMap<QString, uint32_t> attrMasks);
+    std::optional<QMap<QString, uint32_t>> getMetatileAttrBitMasks() const;
 private:
     QList<Metatile*> m_metatiles;
 
     QList<QImage> m_tiles;
     QImage m_tilesImage;
     bool m_hasUnsavedTilesImage = false;
+
+    /// Allow us to know how to pack and unpack the binary in the case of multiple metatile packing formats in a single
+    /// project. When using this member, it will ignore the project settings for how to pack attr bits
+    std::optional<QMap<QString, uint32_t>> m_metatileAttrBitMasks{};
+    /// Allow for arbitrary sizes
+    std::optional<unsigned> m_numMetatiles{};
+    /// Allow for arbitrary sizes
+    std::optional<unsigned> m_numTiles{};
+    /// Allow for arbitrary sizes
+    std::optional<unsigned> m_numPals{};
 };
 
 #endif // TILESET_H

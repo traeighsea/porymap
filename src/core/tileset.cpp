@@ -26,7 +26,10 @@ Tileset::Tileset(const Tileset &other)
       palettes(other.palettes),
       palettePreviews(other.palettePreviews),
       m_tilesImage(other.m_tilesImage.copy()),
-      m_hasUnsavedTilesImage(other.m_hasUnsavedTilesImage)
+      m_hasUnsavedTilesImage(other.m_hasUnsavedTilesImage),
+      m_metatileAttrBitMasks(other.m_metatileAttrBitMasks),
+      m_numTiles(other.m_numTiles),
+      m_numPals(other.m_numPals)
 {
     for (auto tile : other.m_tiles) {
         m_tiles.append(tile.copy());
@@ -52,6 +55,10 @@ Tileset &Tileset::operator=(const Tileset &other) {
     metatileLabels = other.metatileLabels;
     palettes = other.palettes;
     palettePreviews = other.palettePreviews;
+    m_metatileAttrBitMasks = other.m_metatileAttrBitMasks;
+    m_numMetatiles = other.m_numMetatiles;
+    m_numTiles = other.m_numTiles;
+    m_numPals = other.m_numPals;
 
     m_tiles.clear();
     for (auto tile : other.m_tiles) {
@@ -94,7 +101,6 @@ void Tileset::resizeMetatiles(int newNumMetatiles) {
         m_metatiles.append(new Metatile(numTiles));
     }
 }
-
 uint16_t Tileset::firstMetatileId() const {
     return this->is_secondary ? Project::getNumMetatilesPrimary() : 0;
 }
@@ -103,8 +109,12 @@ uint16_t Tileset::lastMetatileId() const {
     return qMax(1, firstMetatileId() + m_metatiles.length()) - 1;
 }
 
+int Tileset::numMetatiles() const {
+    return m_numMetatiles.value_or(m_metatiles.length());
+}
+
 int Tileset::maxMetatiles() const {
-    return this->is_secondary ? Project::getNumMetatilesSecondary() : Project::getNumMetatilesPrimary();
+    return m_numMetatiles.value_or(this->is_secondary ? Project::getNumMetatilesSecondary() : Project::getNumMetatilesPrimary());
 }
 
 uint16_t Tileset::firstTileId() const {
@@ -115,8 +125,12 @@ uint16_t Tileset::lastTileId() const {
     return qMax(1, firstMetatileId() + m_tiles.length()) - 1;
 }
 
+int Tileset::numTiles() const {
+    return m_numTiles.value_or(m_tiles.length());
+}
+
 int Tileset::maxTiles() const {
-    return this->is_secondary ? Project::getNumTilesSecondary() : Project::getNumTilesPrimary();
+    return m_numTiles.value_or(is_secondary ? Project::getNumTilesTotal() - Project::getNumTilesPrimary() : Project::getNumTilesPrimary());
 }
 
 Tileset* Tileset::getPaletteTileset(int paletteId, Tileset *primaryTileset, Tileset *secondaryTileset) {
@@ -777,4 +791,20 @@ QList<uint16_t> Tileset::findMetatilesUsingColor(int paletteId, int colorId, con
     QList<uint16_t> metatileIds(metatileIdSet.constBegin(), metatileIdSet.constEnd());
     std::sort(metatileIds.begin(), metatileIds.end());
     return metatileIds;
+}
+
+void Tileset::setNumPalettes(unsigned numPals) {
+    m_numPals = numPals;
+}
+
+unsigned Tileset::getNumPalettes() const {
+    return m_numPals.value_or(is_secondary ? Project::getNumPalettesTotal() - Project::getNumPalettesPrimary() : Project::getNumPalettesPrimary());
+}
+
+void Tileset::setMetatileAttrBitMasks(const QMap<QString, uint32_t> attrMasks) {
+    m_metatileAttrBitMasks = attrMasks;
+}
+
+std::optional<QMap<QString, uint32_t>> Tileset::getMetatileAttrBitMasks() const {
+    return m_metatileAttrBitMasks;
 }
