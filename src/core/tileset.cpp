@@ -5,6 +5,8 @@
 #include "config.h"
 #include "imageproviders.h"
 #include "validator.h"
+#include "utility.h"
+#include "parseutil.h"
 
 #include <QPainter>
 #include <QImage>
@@ -468,105 +470,35 @@ QHash<int, QString> Tileset::getHeaderMemberMap(bool usingAsm)
 bool Tileset::loadMetatiles() {
     clearMetatiles();
 
-    QFile file(this->metatiles_path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        logError(QString("Could not open '%1' for reading: %2").arg(this->metatiles_path).arg(file.errorString()));
-        return false;
+    if (Util::hasExtension(this->metatiles_path, "json")) {
+        return deserializeMetatilesFromJson();
+    } else {
+        return deserializeMetatilesFromBin();
     }
-
-    QByteArray data = file.readAll();
-    int tilesPerMetatile = projectConfig.getNumTilesInMetatile();
-    int bytesPerMetatile = Tile::sizeInBytes() * tilesPerMetatile;
-    int numMetatiles = data.length() / bytesPerMetatile;
-    if (numMetatiles > maxMetatiles()) {
-        logWarn(QString("%1 metatile count %2 exceeds limit of %3. Additional metatiles will be ignored.")
-                        .arg(this->name)
-                        .arg(numMetatiles)
-                        .arg(maxMetatiles()));
-        numMetatiles = maxMetatiles();
-    }
-
-    for (int i = 0; i < numMetatiles; i++) {
-        auto metatile = new Metatile;
-        int index = i * bytesPerMetatile;
-        for (int j = 0; j < tilesPerMetatile; j++) {
-            uint16_t tileRaw = static_cast<unsigned char>(data[index++]);
-            tileRaw |= static_cast<unsigned char>(data[index++]) << 8;
-            metatile->tiles.append(Tile(tileRaw));
-        }
-        m_metatiles.append(metatile);
-    }
-    return true;
 }
 
 bool Tileset::saveMetatiles() {
-    QFile file(this->metatiles_path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        logError(QString("Could not open '%1' for writing: %2").arg(this->metatiles_path).arg(file.errorString()));
-        return false;
+    if (Util::hasExtension(this->metatiles_path, "json")) {
+        return serializeMetatilesToJson();
+    } else {
+        return serializeMetatilesToBin();
     }
-
-    QByteArray data;
-    int numTiles = projectConfig.getNumTilesInMetatile();
-    for (const auto &metatile : m_metatiles) {
-        for (int i = 0; i < numTiles; i++) {
-            uint16_t tile = metatile->tiles.value(i).rawValue();
-            data.append(static_cast<char>(tile));
-            data.append(static_cast<char>(tile >> 8));
-        }
-    }
-    file.write(data);
-    return true;
 }
 
 bool Tileset::loadMetatileAttributes() {
-    QFile file(this->metatile_attrs_path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        logError(QString("Could not open '%1' for reading: %2").arg(this->metatile_attrs_path).arg(file.errorString()));
-        return false;
+    if (Util::hasExtension(this->metatile_attrs_path, "json")) {
+        return deserializeMetatileAttributesFromJson();
+    } else {
+       return deserializeMetatileAttributesFromBin();
     }
-
-    QByteArray data = file.readAll();
-    int attrSize = projectConfig.metatileAttributesSize;
-    int numMetatiles = m_metatiles.length();
-    int numMetatileAttrs = data.length() / attrSize;
-    if (numMetatileAttrs > numMetatiles) {
-        logWarn(QString("%1 metatile attributes count %2 exceeds metatile count of %3. Additional attributes will be ignored.")
-                            .arg(this->name)
-                            .arg(numMetatileAttrs)
-                            .arg(numMetatiles));
-        numMetatileAttrs = numMetatiles;
-    } else if (numMetatileAttrs < numMetatiles) {
-        logWarn(QString("%1 metatile attributes count %2 is fewer than the metatile count of %3. Missing attributes will default to 0.")
-                            .arg(this->name)
-                            .arg(numMetatileAttrs)
-                            .arg(numMetatiles));
-    }
-
-    for (int i = 0; i < numMetatileAttrs; i++) {
-        uint32_t attributes = 0;
-        for (int j = 0; j < attrSize; j++)
-            attributes |= static_cast<unsigned char>(data.at(i * attrSize + j)) << (8 * j);
-        m_metatiles.at(i)->setAttributes(attributes);
-    }
-    return true;
 }
 
 bool Tileset::saveMetatileAttributes() {
-    QFile file(this->metatile_attrs_path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        logError(QString("Could not open '%1' for writing: %2").arg(this->metatile_attrs_path).arg(file.errorString()));
-        return false;
+    if (Util::hasExtension(this->metatile_attrs_path, "json")) {
+        return serializeMetatileAttributesToBin();
+    } else {
+        return serializeMetatileAttributesToJson();
     }
-
-    QByteArray data;
-    for (const auto &metatile : m_metatiles) {
-        uint32_t attributes = metatile->getAttributes();
-        for (int i = 0; i < projectConfig.metatileAttributesSize; i++)
-            data.append(static_cast<char>(attributes >> (8 * i)));
-    }
-    file.write(data);
-    return true;
 }
 
 bool Tileset::loadTilesImage(QImage *importedImage) {
@@ -808,3 +740,408 @@ void Tileset::setMetatileAttrBitMasks(const QMap<QString, uint32_t> attrMasks) {
 std::optional<QMap<QString, uint32_t>> Tileset::getMetatileAttrBitMasks() const {
     return m_metatileAttrBitMasks;
 }
+
+bool Tileset::deserializeMetatilesFromBin() {
+    QFile file(this->metatiles_path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        logError(QString("Could not open '%1' for reading: %2").arg(this->metatiles_path).arg(file.errorString()));
+        return false;
+    }
+
+    QByteArray data = file.readAll();
+    int tilesPerMetatile = projectConfig.getNumTilesInMetatile();
+    int bytesPerMetatile = Tile::sizeInBytes() * tilesPerMetatile;
+    int numberMetatiles = data.length() / bytesPerMetatile;
+    if (numberMetatiles > maxMetatiles()) {
+        logWarn(QString("%1 metatile count %2 exceeds limit of %3. Additional metatiles will be ignored.")
+                        .arg(this->name)
+                        .arg(numberMetatiles)
+                        .arg(maxMetatiles()));
+        numberMetatiles = maxMetatiles();
+    }
+
+    for (int i = 0; i < numberMetatiles; i++) {
+        auto metatile = new Metatile;
+        int index = i * bytesPerMetatile;
+        for (int j = 0; j < tilesPerMetatile; j++) {
+            uint16_t tileRaw = static_cast<unsigned char>(data[index++]);
+            tileRaw |= static_cast<unsigned char>(data[index++]) << 8;
+            metatile->tiles.append(Tile(tileRaw));
+        }
+        m_metatiles.append(metatile);
+    }
+    return true;
+}
+
+bool Tileset::deserializeMetatilesFromJson() {
+    if (Util::hasExtension(this->metatiles_path, "json")) {
+        logError(QString("Incorrect file format, expected json extension %1").arg(metatiles_path));
+        return false;
+    }
+
+    if (!m_metatiles.empty()) {
+        logError(QString("Expected metatiles list to be empty at %1").arg(metatiles_path));
+        return false;
+    }
+
+    QJsonDocument metatilesDoc;
+    ParseUtil parser;
+    if (!parser.tryParseJsonFile(&metatilesDoc, metatiles_path)) {
+        logError(QString("Failed to read metatiles from %1").arg(metatiles_path));
+        return false;
+    }
+
+    QJsonObject metatilesObj = metatilesDoc.object();
+    QJsonArray metatilesArr = metatilesObj["metatiles"].toArray();
+    if (metatilesArr.size() == 0) {
+        logError(QString("'metatiles' array is missing from %1.").arg(metatiles_path));
+        return false;
+    }
+
+    m_numMetatiles.reset();
+    bool succeeded{false};
+    auto numMetatiles = ParseUtil::jsonToInt(metatilesObj["numMetatiles"], &succeeded);
+    if (succeeded) {
+        m_numMetatiles = numMetatiles;
+    } else {
+        int numMetatilesDefault = is_secondary ? Project::getNumMetatilesTotal() - Project::getNumMetatilesPrimary() : Project::getNumMetatilesPrimary();
+        if (numMetatiles != numMetatilesDefault){
+            logWarn(QString("Num metatiles %1 different than expected in %2").arg(numMetatiles).arg(metatiles_path));
+        }
+    }
+
+    m_numTiles.reset();
+    auto numTiles = ParseUtil::jsonToInt(metatilesObj["numTiles"], &succeeded);
+    if (succeeded) {
+        m_numTiles = numTiles;
+    } else {
+        int numTilesDefault = is_secondary ? Project::getNumTilesTotal() - Project::getNumTilesPrimary() : Project::getNumTilesPrimary();
+        if (numTiles != numTilesDefault){
+            logWarn(QString("Num tiles %1 different than expected in %2").arg(numTiles).arg(metatiles_path));
+        }
+    }
+
+    m_numPals.reset();
+    auto numPals = ParseUtil::jsonToInt(metatilesObj["numPals"], &succeeded);
+    if (succeeded) {
+        m_numPals = numPals;
+    } else {
+        int numPalsDefault = is_secondary ? Project::getNumPalettesTotal() - Project::getNumPalettesPrimary() : Project::getNumPalettesPrimary();
+        if (numPals != numPalsDefault){
+            logWarn(QString("Num palettes %1 different than expected in %2").arg(numPals).arg(metatiles_path));
+        }
+    }
+
+    QList<QString> requiredFields = QList<QString>{
+        "tiles",
+    };
+
+    for (int i = 0; i < metatilesArr.size(); i++) {
+        QJsonObject tilesObj = metatilesArr[i].toObject();
+        if (tilesObj.isEmpty())
+            continue;
+
+        int tilesPerMetatile = projectConfig.getNumTilesInMetatile();
+        QJsonArray tilesArr = tilesObj["tiles"].toArray();
+        if (tilesArr.size() == 0) {
+            logError(QString("'tiles' array is missing from %1.").arg(metatiles_path));
+            return false;
+        } else if (tilesArr.size() != tilesPerMetatile) {
+            logError(QString("'tiles' at index %1 array size %2 different than project config Number of Tiles in Metatile %3.").arg(i).arg(tilesArr.size()).arg(tilesPerMetatile));
+            return false;
+        }
+
+        Metatile* metatile = new Metatile();
+        for (int j = 0; j < tilesPerMetatile; j++) {
+            QJsonObject tileObj = tilesArr[j].toObject();
+            if (tilesObj.isEmpty())
+                continue;
+            QList<QString> tileRequiredFields = QList<QString>{
+                "tileId",
+                "xflip",
+                "yflip",
+                "palette",
+            };
+
+            bool succeeded{true};
+            Tile tile;
+
+            tile.tileId = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["tileId"], &succeeded));
+            if (!succeeded) {
+                logError(QString("Missing 'tileId' value on layout %1 in %2").arg(i).arg(metatiles_path));
+                return false;
+            }
+
+            tile.xflip = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["xflip"], &succeeded));
+            if (!succeeded) {
+                logError(QString("Missing 'xflip' value on layout %1 in %2").arg(i).arg(metatiles_path));
+                return false;
+            }
+
+            tile.yflip = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["yflip"], &succeeded));
+            if (!succeeded) {
+                logError(QString("Missing 'yflip' value on layout %1 in %2").arg(i).arg(metatiles_path));
+                return false;
+            }
+
+            tile.palette = static_cast<uint16_t>(ParseUtil::jsonToInt(tileObj["palette"], &succeeded));
+            if (!succeeded) {
+                logError(QString("Missing 'palette' value on layout %1 in %2").arg(i).arg(metatiles_path));
+                return false;
+            }
+
+            metatile->tiles.append(tile);
+        }
+        m_metatiles.append(std::move(metatile));
+    }
+    return true;
+}
+
+bool Tileset::deserializeMetatileAttributesFromBin() {
+    QFile file(this->metatile_attrs_path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        logError(QString("Could not open '%1' for reading: %2").arg(this->metatile_attrs_path).arg(file.errorString()));
+        return false;
+    }
+
+    QByteArray data = file.readAll();
+    int attrSize = projectConfig.metatileAttributesSize;
+    int numberMetatiles = m_metatiles.length();
+    int numMetatileAttrs = data.length() / attrSize;
+    if (numMetatileAttrs > numberMetatiles) {
+        logWarn(QString("%1 metatile attributes count %2 exceeds metatile count of %3. Additional attributes will be ignored.")
+                            .arg(this->name)
+                            .arg(numMetatileAttrs)
+                            .arg(numberMetatiles));
+        numMetatileAttrs = numberMetatiles;
+    } else if (numMetatileAttrs < numberMetatiles) {
+        logWarn(QString("%1 metatile attributes count %2 is fewer than the metatile count of %3. Missing attributes will default to 0.")
+                            .arg(this->name)
+                            .arg(numMetatileAttrs)
+                            .arg(numberMetatiles));
+    }
+
+    for (int i = 0; i < numMetatileAttrs; i++) {
+        uint32_t attributes = 0;
+        for (int j = 0; j < attrSize; j++)
+            attributes |= static_cast<unsigned char>(data.at(i * attrSize + j)) << (8 * j);
+        m_metatiles.at(i)->setAttributes(attributes);
+    }
+    return true;
+}
+
+bool Tileset::deserializeMetatileAttributesFromJson() {
+    if (Util::hasExtension(this->metatile_attrs_path, "json")) {
+        logError(QString("Incorrect file format, expected json extension %1").arg(metatile_attrs_path));
+        return false;
+    }
+
+    if (m_metatiles.empty()) {
+        logError(QString("Expected metatile list to not be empty at %1").arg(metatile_attrs_path));
+        return false;
+    }
+
+    QJsonDocument metatileAttrDoc;
+    QJsonObject metatilesObj = metatileAttrDoc.object();
+
+    bool succeeded{false};
+    auto numMetatiles = ParseUtil::jsonToInt(metatilesObj["numMetatiles"], &succeeded);
+    if (succeeded && m_numMetatiles != numMetatiles) {
+        logWarn(QString("Num metatiles %1 different than expected in %2").arg(numMetatiles).arg(metatile_attrs_path));
+
+    }
+
+    QJsonObject attributeMasksObj = metatilesObj["attributeMasks"].toObject();
+
+    m_metatileAttrBitMasks = QMap<QString, uint32_t>();
+    auto metatileAttrPacker = std::make_shared<QMap<QString, BitPacker>>();
+    // Loop through all the attribute masks
+    // Allow arbitrarily named keys and set them accordingly
+    for (auto key: attributeMasksObj.keys()){
+        auto str = attributeMasksObj[key].toString();
+        uint32_t bitmask = Util::hexToInt<uint32_t>(str);
+        m_metatileAttrBitMasks->insert(key, bitmask);
+        metatileAttrPacker->insert(key, bitmask);
+    }
+
+    QJsonArray metatileAttrArr = metatilesObj["metatiles"].toArray();
+    if (metatileAttrArr.size() == 0) {
+        logError(QString("'metatiles' array is missing from %1.").arg(metatile_attrs_path));
+        return false;
+    }
+
+    for (int i = 0; i < metatileAttrArr.size(); i++) {
+        QJsonObject metatileAttrObj = metatileAttrArr[i].toObject();
+        if (metatileAttrObj.isEmpty()) {
+            logError(QString("Issue parsing metatile attribute index %1 from %2.").arg(i).arg(metatile_attrs_path));
+            continue;
+        }
+
+        m_metatiles.at(i)->setCustomBitPacker(metatileAttrPacker);
+
+        QJsonObject attrObj = metatileAttrObj["attributes"].toObject();
+
+        // Loop through all the attributes
+        // Allow arbitrarily named keys and set them accordingly
+        for (auto key: attrObj.keys()){
+            bool succeeded{true};
+            auto attrVal = static_cast<uint32_t>(ParseUtil::jsonToInt(attrObj[key], &succeeded));
+            if (!succeeded) {
+                logError(QString("Issue parsing metatile attribute %1 index %2 from %3.").arg(key).arg(i).arg(metatile_attrs_path));
+                continue;
+            }
+
+            // Special case unused because we wanna preserve the data
+            if (key == "unused") {
+                auto unusedVal = m_metatiles.at(i)->getAttribute(Metatile::Attr::Unused);
+                m_metatiles.at(i)->setAttribute(key, attrVal | unusedVal);
+            } else {
+                m_metatiles.at(i)->setAttribute(key, attrVal);
+            }
+        }
+    }
+    return true;
+}
+
+bool Tileset::serializeMetatilesToBin() {
+    QFile file(this->metatiles_path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        logError(QString("Could not open '%1' for writing: %2").arg(this->metatiles_path).arg(file.errorString()));
+        return false;
+    }
+
+    QByteArray data;
+    int numTiles = projectConfig.getNumTilesInMetatile();
+    for (const auto &metatile : m_metatiles) {
+        for (int i = 0; i < numTiles; i++) {
+            uint16_t tile = metatile->tiles.value(i).rawValue();
+            data.append(static_cast<char>(tile));
+            data.append(static_cast<char>(tile >> 8));
+        }
+    }
+    file.write(data);
+    return true;
+}
+
+bool Tileset::serializeMetatilesToJson() {
+    QFile metatilesFile(metatiles_path);
+    if (metatilesFile.open(QIODevice::WriteOnly)) {
+        OrderedJson::object metatilesObj;
+
+        int numberMetatiles = numMetatiles();
+        metatilesObj["numMetatiles"] = numberMetatiles;
+
+        int numberTiles = numTiles();
+        metatilesObj["numTiles"] = numberTiles;
+
+        int numPals = getNumPalettes();
+        metatilesObj["numPals"] = numPals;
+
+        int numTilesInMetatile = projectConfig.getNumTilesInMetatile();
+        if (m_metatiles[0]->tiles.size() != numTilesInMetatile) {
+            numTilesInMetatile = m_metatiles[0]->tiles.size();
+        }
+        metatilesObj["numTilesInMetatile"] = numTilesInMetatile;
+
+        OrderedJson::array metatilesArr;
+        for (Metatile *metatile : m_metatiles) {
+            OrderedJson::array tileArr;
+            for (int i = 0; i < metatile->tiles.size(); i++) {
+                OrderedJson::object tileObj;
+                tileObj["tileId"] = metatile->tiles[i].tileId;
+                tileObj["xflip"] = metatile->tiles[i].xflip;
+                tileObj["yflip"] = metatile->tiles[i].yflip;
+                tileObj["palette"] = metatile->tiles[i].palette;
+                tileArr.push_back(tileObj);
+            }
+            OrderedJson::object metatileObj;
+            metatileObj["tiles"] = tileArr;
+
+            metatilesArr.push_back(metatileObj);
+        }
+        metatilesObj["metatiles"] = metatilesArr;
+
+        OrderedJson metatilesJson(metatilesObj);
+        OrderedJsonDoc jsonDoc(&metatilesJson);
+        jsonDoc.dump(&metatilesFile);
+    } else {
+        logError(QString("Could not open tileset metatile attr file '%1'").arg(metatiles_path));
+        return false;
+    }
+    return true;
+}
+
+bool Tileset::serializeMetatileAttributesToBin() {
+    QFile file(this->metatile_attrs_path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        logError(QString("Could not open '%1' for writing: %2").arg(this->metatile_attrs_path).arg(file.errorString()));
+        return false;
+    }
+
+    QByteArray data;
+    for (const auto &metatile : m_metatiles) {
+        uint32_t attributes = metatile->getAttributes();
+        for (int i = 0; i < projectConfig.metatileAttributesSize; i++)
+            data.append(static_cast<char>(attributes >> (8 * i)));
+    }
+    file.write(data);
+    return true;
+}
+
+bool Tileset::serializeMetatileAttributesToJson() {
+    QFile metatileAttrFile(metatile_attrs_path);
+    if (metatileAttrFile.open(QIODevice::WriteOnly)) {      
+        OrderedJson::object metatilesObj;
+
+        int numberMetatiles = numMetatiles();
+        metatilesObj["numMetatiles"] = numberMetatiles;
+
+        int metatileAttributeSize = projectConfig.metatileAttributesSize * 8;
+        metatilesObj["attributeSizeInBits"] = metatileAttributeSize;
+
+        OrderedJson::object attributeMasksObj;
+        if (m_metatileAttrBitMasks) {
+            for (auto& key: m_metatileAttrBitMasks->keys()){
+                attributeMasksObj[key] = Util::intToHex(m_metatileAttrBitMasks->value(key));
+            }
+        } else {
+            uint32_t behaviorMask = projectConfig.metatileBehaviorMask;
+            uint32_t terrainTypeMask = projectConfig.metatileTerrainTypeMask;
+            uint32_t encounterTypeMask = projectConfig.metatileEncounterTypeMask;
+            uint32_t layerTypeMask = projectConfig.metatileLayerTypeMask;
+            // Calculate mask of bits not used by standard behaviors so we can preserve this data.
+            uint32_t unusedMask = ~(behaviorMask | terrainTypeMask | encounterTypeMask | layerTypeMask);
+            unusedMask &= Metatile::getMaxAttributesMask();
+
+            attributeMasksObj[AttrConsts::BehaviorStr] = Util::intToHex(behaviorMask);
+            attributeMasksObj[AttrConsts::TerrainTypeStr] = Util::intToHex(terrainTypeMask);
+            attributeMasksObj[AttrConsts::EncounterTypeStr] = Util::intToHex(encounterTypeMask);
+            attributeMasksObj[AttrConsts::LayerTypeStr] = Util::intToHex(layerTypeMask);
+            attributeMasksObj[AttrConsts::UnusedStr] = Util::intToHex(unusedMask);
+        }
+        metatilesObj["attributeMasks"] = attributeMasksObj;
+
+        OrderedJson::array metatileAttrArr;
+        for (Metatile *metatile : m_metatiles) {
+            OrderedJson::object metatileAttributeObj;
+            auto keys = metatile->getAttributeKeys();
+            for (auto attribute: keys) {
+                metatileAttributeObj[attribute] = static_cast<int>(metatile->getAttribute(attribute));
+            }
+            OrderedJson::object metatileObj;
+            metatileObj["attributes"] = metatileAttributeObj;
+
+            metatileAttrArr.push_back(metatileObj);
+        }
+        metatilesObj["metatiles"] = metatileAttrArr;
+
+        OrderedJson metatileAttrsJson(metatilesObj);
+        OrderedJsonDoc jsonDoc(&metatileAttrsJson);
+        jsonDoc.dump(&metatileAttrFile);
+    } else {
+        logError(QString("Could not open tileset metatiles file '%1'").arg(metatile_attrs_path));
+        return false;
+    }
+    return true;
+}
+

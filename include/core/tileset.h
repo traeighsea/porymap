@@ -131,6 +131,16 @@ private:
     std::optional<unsigned> m_numTiles{};
     /// Allow for arbitrary sizes
     std::optional<unsigned> m_numPals{};
+
+    bool deserializeMetatilesFromBin();
+    bool deserializeMetatilesFromJson();
+    bool deserializeMetatileAttributesFromBin();
+    bool deserializeMetatileAttributesFromJson();
+
+    bool serializeMetatilesToBin();
+    bool serializeMetatilesToJson();
+    bool serializeMetatileAttributesToBin();
+    bool serializeMetatileAttributesToJson();
 };
 
 #endif // TILESET_H

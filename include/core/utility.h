@@ -7,6 +7,7 @@
 #include <QColorSpace>
 #include <string>
 #include <sstream>
+#include <iomanip>
 
 namespace Util {
     void numericalModeSort(QStringList &list);
