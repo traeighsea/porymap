@@ -17,3 +17,9 @@ moc_*.h
 moc_*.cpp
 qrc_*.cpp
 .qtc_clangd
+
+# Project files
+compile_commands.json
+.vscode
+.cache
+build
