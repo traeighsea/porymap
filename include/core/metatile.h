@@ -11,6 +11,20 @@
 
 class Project;
 
+namespace AttrConsts {
+    constexpr auto BehaviorStr = "behavior";
+    constexpr auto TerrainTypeStr = "terrainType";
+    constexpr auto EncounterTypeStr = "encounterType";
+    constexpr auto LayerTypeStr = "layerType";
+    constexpr auto UnusedStr = "unused";
+    constexpr const char* OrderedAttrStrings[] = {
+        BehaviorStr,
+        TerrainTypeStr,
+        EncounterTypeStr,
+        LayerTypeStr,
+        UnusedStr,
+    };
+}
 
 class Metatile
 {
@@ -19,6 +33,8 @@ public:
     Metatile(const Metatile &other) = default;
     Metatile &operator=(const Metatile &other) = default;
     Metatile(const int numTiles);
+
+    Metatile(const int numTiles, std::shared_ptr<QMap<QString, BitPacker>> attrPacker);
 
     enum LayerType {
         Normal,
@@ -34,15 +50,20 @@ public:
         LayerType,
         Unused, // Preserve bits not used by the other attributes
     };
+    static const char* AttrEnumToStr(const Attr& attribute);
+    static Metatile::Attr StringToAttrEnum(std::string str);
+    static Metatile::Attr StringToAttrEnum(QString str);
 
 public:
     QList<Tile> tiles;
 
     uint32_t getAttributes() const;
-    uint32_t getAttribute(Metatile::Attr attr) const { return this->attributes.value(attr, 0); }
+    uint32_t getAttribute(Metatile::Attr attr) const;
+    uint32_t getAttribute(QString attribute) const;
     void setAttributes(uint32_t data);
     void setAttributes(uint32_t data, BaseGameVersion version);
     void setAttribute(Metatile::Attr attr, uint32_t value);
+    void setAttribute(QString attribute, uint32_t value);
 
     // For convenience
     uint32_t behavior()      const { return this->getAttribute(Attr::Behavior); }
@@ -79,8 +100,18 @@ public:
         return !(operator==(other));
     }
 
+    const QList<QString> getAttributeKeys() const;
+
+    bool hasCustomBitPacker() { return customBitPacker != nullptr; }
+    /// If there's a custom bitpacker, get our data
+    const std::shared_ptr<QMap<QString, BitPacker>>& getCustomBitPacker() const { return customBitPacker; }
+    void setCustomBitPacker(std::shared_ptr<QMap<QString, BitPacker>>& bitpackers) { customBitPacker = bitpackers; }
+
 private:
-    QMap<Metatile::Attr, uint32_t> attributes;
+    QMap<QString, uint32_t> attributes = {};
+
+    /// If this variable is initialized, it implies we have a custom bit packer
+    std::shared_ptr<QMap<QString, BitPacker>> customBitPacker{nullptr};
 };
 
 #endif // METATILE_H
