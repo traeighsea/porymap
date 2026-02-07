@@ -161,3 +161,23 @@ QString Util::mkpath(const QString& dirPath) {
     }
     return QString();
 }
+
+std::string Util::replaceFileExtension(const std::string& path, const std::string& extension) {
+    size_t lastdot = path.find_last_of(".");
+    return path.substr(0, lastdot) + "." + extension; 
+}
+
+QString Util::replaceFileExtension(const QString& path, const std::string& extension) {
+    auto strPath = replaceFileExtension(path.QString::toStdString(), extension);
+    return QString::fromStdString(strPath); 
+}
+
+std::string Util::getFileExtensionFromPath(const QString& path) {
+    auto stdPath = path.QString::toStdString();
+    size_t lastdot = stdPath.find_last_of(".");
+    return stdPath.substr(lastdot + 1, stdPath.back());
+}
+
+bool Util::hasExtension(const QString& path, const std::string& extension) {
+    return getFileExtensionFromPath(path) == extension;
+}
