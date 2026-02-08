@@ -176,8 +176,10 @@ public:
 private:
     void setNewDimensionsBlockdata(int newWidth, int newHeight);
     void setNewBorderDimensionsBlockdata(int newWidth, int newHeight);
-    bool writeBlockdata(const QString &path, const Blockdata &blockdata) const;
-    static Blockdata readBlockdata(const QString &path, QString *error);
+    bool writeBlockdataToBin(const QString &path, const Blockdata &blockdata) const;
+    bool writeBlockdataToJson(const QString &path, const Blockdata &blockdata) const;
+    static Blockdata readBlockdataFromBin(const QString &path, QString *error);
+    static Blockdata readBlockdataFromJson(const QString &path, QString *error);
 
     static int getBorderDrawDistance(int dimension, qreal minimum);
 

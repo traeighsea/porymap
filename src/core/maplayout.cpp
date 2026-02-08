@@ -7,6 +7,7 @@
 #include "utility.h"
 #include "project.h"
 #include "layoutpixmapitem.h"
+#include "utility.h"
 
 QList<int> Layout::s_globalMetatileLayerOrder;
 QList<float> Layout::s_globalMetatileLayerOpacity;
@@ -513,15 +514,15 @@ bool Layout::save(const QString &root) {
 
 bool Layout::saveBorder(const QString &root) {
     QString path = QString("%1/%2").arg(root).arg(this->border_path);
-    return writeBlockdata(path, this->border);
+    return Util::hasExtension(path, "json") ? writeBlockdataToJson(path, this->border) : writeBlockdataToBin(path, this->border);
 }
 
 bool Layout::saveBlockdata(const QString &root) {
     QString path = QString("%1/%2").arg(root).arg(this->blockdata_path);
-    return writeBlockdata(path, this->blockdata);
+    return Util::hasExtension(path, "json") ? writeBlockdataToJson(path, this->blockdata) : writeBlockdataToBin(path, this->blockdata);
 }
 
-bool Layout::writeBlockdata(const QString &path, const Blockdata &blockdata) const {
+bool Layout::writeBlockdataToBin(const QString &path, const Blockdata &blockdata) const {
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly)) {
         logError(QString("Failed to write '%1' for %2: %3").arg(path).arg(this->name).arg(file.errorString()));
@@ -533,6 +534,39 @@ bool Layout::writeBlockdata(const QString &path, const Blockdata &blockdata) con
     return true;
 }
 
+bool Layout::writeBlockdataToJson(const QString &path, const Blockdata &blockdata) const {
+    QFile file(path);
+
+    if (!file.open(QIODevice::WriteOnly)) {
+        logError(QString("Error: Could not open %1 for writing").arg(path));
+        return false;
+    }
+    OrderedJson::object mapObj;
+
+    mapObj["mapgridSizeInBits"] = 16;
+
+    OrderedJson::object mapgridMasksObj;
+    mapgridMasksObj["metatileId"] = Util::intToHex(projectConfig.blockMetatileIdMask);
+    mapgridMasksObj["collision"] = Util::intToHex(projectConfig.blockCollisionMask);
+    mapgridMasksObj["elevation"] = Util::intToHex(projectConfig.blockElevationMask);
+    mapObj["mapgridMasks"] = mapgridMasksObj;
+
+    OrderedJson::array blocksArr;
+    for (auto block : blockdata) {
+        OrderedJson::object blockObj;
+        blockObj["metatileId"] = block.metatileId();
+        blockObj["collision"] = block.collision();
+        blockObj["elevation"] = block.elevation();
+        blocksArr.push_back(blockObj);
+    }
+    mapObj["mapgrid"] = blocksArr;
+
+    OrderedJson blockDataJson(mapObj);
+    OrderedJsonDoc jsonDoc(&blockDataJson);
+    jsonDoc.dump(&file);
+    file.close();
+}
+
 bool Layout::loadBorder(const QString &root) {
     if (this->border_path.isEmpty()) {
         logError(QString("Failed to load border for %1: no path specified.").arg(this->name));
@@ -541,7 +575,7 @@ bool Layout::loadBorder(const QString &root) {
 
     QString error;
     QString path = QString("%1/%2").arg(root).arg(this->border_path);
-    auto blockdata = readBlockdata(path, &error);
+    auto blockdata = Util::hasExtension(path, "json") ? readBlockdataFromJson(path, &error) : readBlockdataFromBin(path, &error);
     if (!error.isEmpty()) {
         logError(QString("Failed to load border for %1 from '%2': %3").arg(this->name).arg(path).arg(error));
         return false;
@@ -581,7 +615,7 @@ bool Layout::loadBlockdata(const QString &root) {
 
     QString error;
     QString path = QString("%1/%2").arg(root).arg(this->blockdata_path);
-    auto blockdata = readBlockdata(path, &error);
+    auto blockdata = Util::hasExtension(path, "json") ? readBlockdataFromJson(path, &error) : readBlockdataFromBin(path, &error);
     if (!error.isEmpty()) {
         logError(QString("Failed to load blockdata for %1 from '%2': %3").arg(this->name).arg(path).arg(error));
         return false;
@@ -609,7 +643,7 @@ bool Layout::loadBlockdata(const QString &root) {
     return true;
 }
 
-Blockdata Layout::readBlockdata(const QString &path, QString *error) {
+Blockdata Layout::readBlockdataFromBin(const QString &path, QString *error) {
     Blockdata blockdata;
 
     QFile file(path);
@@ -625,3 +659,58 @@ Blockdata Layout::readBlockdata(const QString &path, QString *error) {
 
     return blockdata;
 }
+
+Blockdata Layout::readBlockdataFromJson(const QString &path, QString *error) {
+    Blockdata blockdata{};
+
+    QJsonDocument blockDataDoc;
+    ParseUtil parser;
+    if (!parser.tryParseJsonFile(&blockDataDoc, path)) {
+        logError(QString("Failed to read map layouts from %1").arg(path));
+        return blockdata;
+    }
+
+    QJsonObject mapObj = blockDataDoc.object();
+    QJsonArray blockDataArr = mapObj["mapgrid"].toArray();
+    if (blockDataArr.size() == 0) {
+        logError(QString("'mapgrid' array is missing from %1.").arg(path));
+        return blockdata;
+    }
+
+    QList<QString> requiredFields = QList<QString>{
+        "metatileId",
+        "collision",
+        "elevation",
+    };
+
+    for (int i = 0; i < blockDataArr.size(); i++) {
+        QJsonObject blockDataObj = blockDataArr[i].toObject();
+        if (blockDataObj.isEmpty())
+            continue;
+
+        Block block{};
+        bool succeeded{true};
+        block.setMetatileId(ParseUtil::jsonToInt(blockDataObj["metatileId"], &succeeded));
+        if (!succeeded) {
+            logError(QString("Missing 'metatileId' value on layout %1 in %2").arg(i).arg(path));
+            return blockdata;
+        }
+
+        block.setCollision(ParseUtil::jsonToInt(blockDataObj["collision"], &succeeded));
+        if (!succeeded) {
+            logError(QString("Missing 'collision' value on layout %1 in %2").arg(i).arg(path));
+            return blockdata;
+        }
+
+        block.setElevation(ParseUtil::jsonToInt(blockDataObj["elevation"], &succeeded));
+        if (!succeeded) {
+            logError(QString("Missing 'elevation' value on layout %1 in %2").arg(i).arg(path));
+            return blockdata;
+        }
+
+        blockdata.append(std::move(block));
+    }
+
+    return blockdata;
+}
+
