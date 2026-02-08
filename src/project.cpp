@@ -574,8 +574,9 @@ Layout *Project::createNewLayout(const Layout::Settings &settings, const Layout 
     const QString folderName = !settings.folderName.isEmpty() ? settings.folderName : layout->name;
     const QString folderPath = projectConfig.getFilePath(ProjectFilePath::data_layouts_folders) + folderName;
     layout->newFolderPath = folderPath;
-    layout->border_path = folderPath + "/border.bin";
-    layout->blockdata_path = folderPath + "/map.bin";
+    // TODO(@traeighsea): update to decern bin vs json
+    layout->border_path = folderPath + "/border.json";
+    layout->blockdata_path = folderPath + "/map.json";
 
     if (layout->blockdata.isEmpty()) {
         // Fill layout using default fill settings
@@ -1532,10 +1533,29 @@ void Project::readTilesetPaths(Tileset* tileset) {
 
         if (!tilesImagePath.isEmpty())
             tileset->tilesImagePath = this->fixGraphicPath(rootDir + tilesImagePath);
-        if (!metatilesPath.isEmpty())
-            tileset->metatiles_path = rootDir + metatilesPath;
-        if (!metatileAttrsPath.isEmpty())
-            tileset->metatile_attrs_path = rootDir + metatileAttrsPath;
+        bool usingJson = true;
+        if (!metatilesPath.isEmpty()) {
+            // TODO(@traeighsea): Update to check if these files are chillin
+            if (usingJson) {
+                // If we're storing metatile data as json, we want to update the path to use json, 
+                // however we still want to keep the bin file extension in the header file
+                auto updatedPath = Util::replaceFileExtension(metatilesPath, "json");
+                tileset->metatiles_path = rootDir + updatedPath;
+            } else {
+                tileset->metatiles_path = rootDir + metatilesPath;
+            }
+        }
+        if (!metatileAttrsPath.isEmpty()) {
+            if (usingJson) {
+                // If we're storing metatile data as json, we want to update the path to use json, 
+                // however we still want to keep the bin file extension in the header file
+                auto updatedPath = Util::replaceFileExtension(metatileAttrsPath, "json");
+                tileset->metatile_attrs_path = rootDir + updatedPath;
+            } else {
+                tileset->metatile_attrs_path = rootDir + metatileAttrsPath;
+            }
+        }
+
         for (const auto &path : palettePaths)
             tileset->palettePaths.append(this->fixPalettePath(rootDir + path));
     }
@@ -1545,9 +1565,10 @@ void Project::readTilesetPaths(Tileset* tileset) {
     if (tileset->tilesImagePath.isEmpty())
         tileset->tilesImagePath = defaultPath + "/tiles.png";
     if (tileset->metatiles_path.isEmpty())
-        tileset->metatiles_path = defaultPath + "/metatiles.bin";
+        // TODO(@traeighsea): do something about discerning bin from json
+        tileset->metatiles_path = defaultPath + "/metatiles.json";
     if (tileset->metatile_attrs_path.isEmpty())
-        tileset->metatile_attrs_path = defaultPath + "/metatile_attributes.bin";
+        tileset->metatile_attrs_path = defaultPath + "/metatile_attributes.json";
     if (tileset->palettePaths.isEmpty()) {
         QString palettes_dir_path = defaultPath + "/palettes/";
         for (int i = 0; i < Tileset::maxPalettes(); i++) {
@@ -1580,8 +1601,9 @@ Tileset *Project::createNewTileset(QString name, bool secondary, bool checkerboa
     }
 
     tileset->tilesImagePath = fullDirectoryPath + "/tiles.png";
-    tileset->metatiles_path = fullDirectoryPath + "/metatiles.bin";
-    tileset->metatile_attrs_path = fullDirectoryPath + "/metatile_attributes.bin";
+    // TODO(@traeighsea): update to determine which extension to use
+    tileset->metatiles_path = fullDirectoryPath + "/metatiles.json";
+    tileset->metatile_attrs_path = fullDirectoryPath + "/metatile_attributes.json";
 
     // Set default tiles image
     QImage tilesImage(":/images/blank_tileset.png");

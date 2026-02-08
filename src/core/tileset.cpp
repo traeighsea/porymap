@@ -407,8 +407,9 @@ bool Tileset::appendToMetatiles(const QString &filepath, const QString &friendly
     }
 
     const QString tilesetDir = this->getExpectedDir();
-    const QString metatilesPath = tilesetDir + "/metatiles.bin";
-    const QString metatileAttrsPath = tilesetDir + "/metatile_attributes.bin";
+    // TODO(@traeighsea): update to determine which extension to use
+    const QString metatilesPath = tilesetDir + "/metatiles.json";
+    const QString metatileAttrsPath = tilesetDir + "/metatile_attributes.json";
 
     QString dataString = "\n";
     if (usingAsm) {
@@ -774,13 +775,8 @@ bool Tileset::deserializeMetatilesFromBin() {
 }
 
 bool Tileset::deserializeMetatilesFromJson() {
-    if (Util::hasExtension(this->metatiles_path, "json")) {
+    if (!Util::hasExtension(this->metatiles_path, "json")) {
         logError(QString("Incorrect file format, expected json extension %1").arg(metatiles_path));
-        return false;
-    }
-
-    if (!m_metatiles.empty()) {
-        logError(QString("Expected metatiles list to be empty at %1").arg(metatiles_path));
         return false;
     }
 
@@ -921,24 +917,23 @@ bool Tileset::deserializeMetatileAttributesFromBin() {
 }
 
 bool Tileset::deserializeMetatileAttributesFromJson() {
-    if (Util::hasExtension(this->metatile_attrs_path, "json")) {
+    if (!Util::hasExtension(this->metatile_attrs_path, "json")) {
         logError(QString("Incorrect file format, expected json extension %1").arg(metatile_attrs_path));
         return false;
     }
 
-    if (m_metatiles.empty()) {
-        logError(QString("Expected metatile list to not be empty at %1").arg(metatile_attrs_path));
+    QJsonDocument metatileAttrDoc;
+    ParseUtil parser;
+    if (!parser.tryParseJsonFile(&metatileAttrDoc, metatile_attrs_path)) {
+        logError(QString("Failed to read metatile attrs from %1").arg(metatile_attrs_path));
         return false;
     }
-
-    QJsonDocument metatileAttrDoc;
     QJsonObject metatilesObj = metatileAttrDoc.object();
 
     bool succeeded{false};
     auto numMetatiles = ParseUtil::jsonToInt(metatilesObj["numMetatiles"], &succeeded);
     if (succeeded && m_numMetatiles != numMetatiles) {
         logWarn(QString("Num metatiles %1 different than expected in %2").arg(numMetatiles).arg(metatile_attrs_path));
-
     }
 
     QJsonObject attributeMasksObj = metatilesObj["attributeMasks"].toObject();

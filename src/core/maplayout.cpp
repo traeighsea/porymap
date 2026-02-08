@@ -565,6 +565,7 @@ bool Layout::writeBlockdataToJson(const QString &path, const Blockdata &blockdat
     OrderedJsonDoc jsonDoc(&blockDataJson);
     jsonDoc.dump(&file);
     file.close();
+    return true;
 }
 
 bool Layout::loadBorder(const QString &root) {
