@@ -832,10 +832,6 @@ bool Tileset::deserializeMetatilesFromJson() {
         }
     }
 
-    QList<QString> requiredFields = QList<QString>{
-        "tiles",
-    };
-
     for (int i = 0; i < metatilesArr.size(); i++) {
         QJsonObject tilesObj = metatilesArr[i].toObject();
         if (tilesObj.isEmpty())
@@ -856,12 +852,6 @@ bool Tileset::deserializeMetatilesFromJson() {
             QJsonObject tileObj = tilesArr[j].toObject();
             if (tilesObj.isEmpty())
                 continue;
-            QList<QString> tileRequiredFields = QList<QString>{
-                "tileId",
-                "xflip",
-                "yflip",
-                "palette",
-            };
 
             bool succeeded{true};
             Tile tile;

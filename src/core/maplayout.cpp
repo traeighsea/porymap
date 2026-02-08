@@ -677,12 +677,6 @@ Blockdata Layout::readBlockdataFromJson(const QString &path, QString *error) {
         return blockdata;
     }
 
-    QList<QString> requiredFields = QList<QString>{
-        "metatileId",
-        "collision",
-        "elevation",
-    };
-
     for (int i = 0; i < blockDataArr.size(); i++) {
         QJsonObject blockDataObj = blockDataArr[i].toObject();
         if (blockDataObj.isEmpty())
