@@ -1,6 +1,7 @@
 #include "maplayout.h"
 
 #include <QRegularExpression>
+#include <filesystem>
 
 #include "scripting.h"
 #include "imageproviders.h"
@@ -576,6 +577,12 @@ bool Layout::loadBorder(const QString &root) {
 
     QString error;
     QString path = QString("%1/%2").arg(root).arg(this->border_path);
+
+    // Check if we have a json file equivalent, and if so use that instead
+    if (std::filesystem::exists(std::filesystem::path(Util::replaceFileExtension(path, "json").toStdString()))) {
+        path = Util::replaceFileExtension(path, "json");
+    }
+
     auto blockdata = Util::hasExtension(path, "json") ? readBlockdataFromJson(path, &error) : readBlockdataFromBin(path, &error);
     if (!error.isEmpty()) {
         logError(QString("Failed to load border for %1 from '%2': %3").arg(this->name).arg(path).arg(error));
@@ -616,6 +623,12 @@ bool Layout::loadBlockdata(const QString &root) {
 
     QString error;
     QString path = QString("%1/%2").arg(root).arg(this->blockdata_path);
+
+    // Check if we have a json file equivalent, and if so use that instead
+    if (std::filesystem::exists(std::filesystem::path(Util::replaceFileExtension(path, "json").toStdString()))) {
+        path = Util::replaceFileExtension(path, "json");
+    }
+
     auto blockdata = Util::hasExtension(path, "json") ? readBlockdataFromJson(path, &error) : readBlockdataFromBin(path, &error);
     if (!error.isEmpty()) {
         logError(QString("Failed to load blockdata for %1 from '%2': %3").arg(this->name).arg(path).arg(error));
