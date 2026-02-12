@@ -1533,24 +1533,25 @@ void Project::readTilesetPaths(Tileset* tileset) {
 
         if (!tilesImagePath.isEmpty())
             tileset->tilesImagePath = this->fixGraphicPath(rootDir + tilesImagePath);
-        bool usingJson = true;
+
         if (!metatilesPath.isEmpty()) {
-            // TODO(@traeighsea): Update to check if these files are chillin
-            if (usingJson) {
-                // If we're storing metatile data as json, we want to update the path to use json, 
-                // however we still want to keep the bin file extension in the header file
-                auto updatedPath = Util::replaceFileExtension(metatilesPath, "json");
-                tileset->metatiles_path = rootDir + updatedPath;
+            // We keep the .bin file extension in the c code as that will load binary data, but if we find jsons,
+            // then we're using jsons as the intermediary format to be compiled to bin
+            QString tryJsonPath= Util::replaceFileExtension(metatilesPath, "json");
+
+            if (std::filesystem::exists(std::filesystem::path((rootDir + tryJsonPath).toStdString()))) {
+                tileset->metatiles_path = rootDir + tryJsonPath;
             } else {
                 tileset->metatiles_path = rootDir + metatilesPath;
             }
         }
         if (!metatileAttrsPath.isEmpty()) {
-            if (usingJson) {
-                // If we're storing metatile data as json, we want to update the path to use json, 
-                // however we still want to keep the bin file extension in the header file
-                auto updatedPath = Util::replaceFileExtension(metatileAttrsPath, "json");
-                tileset->metatile_attrs_path = rootDir + updatedPath;
+            // We keep the .bin file extension in the c code as that will load binary data, but if we find jsons,
+            // then we're using jsons as the intermediary format to be compiled to bin
+            QString tryJsonPath= Util::replaceFileExtension(metatilesPath, "json");
+
+            if (std::filesystem::exists(std::filesystem::path((rootDir + tryJsonPath).toStdString()))) {
+                tileset->metatile_attrs_path = rootDir + tryJsonPath;
             } else {
                 tileset->metatile_attrs_path = rootDir + metatileAttrsPath;
             }
@@ -1565,7 +1566,6 @@ void Project::readTilesetPaths(Tileset* tileset) {
     if (tileset->tilesImagePath.isEmpty())
         tileset->tilesImagePath = defaultPath + "/tiles.png";
     if (tileset->metatiles_path.isEmpty())
-        // TODO(@traeighsea): do something about discerning bin from json
         tileset->metatiles_path = defaultPath + "/metatiles.json";
     if (tileset->metatile_attrs_path.isEmpty())
         tileset->metatile_attrs_path = defaultPath + "/metatile_attributes.json";

@@ -407,9 +407,8 @@ bool Tileset::appendToMetatiles(const QString &filepath, const QString &friendly
     }
 
     const QString tilesetDir = this->getExpectedDir();
-    // TODO(@traeighsea): update to determine which extension to use
-    const QString metatilesPath = tilesetDir + "/metatiles.json";
-    const QString metatileAttrsPath = tilesetDir + "/metatile_attributes.json";
+    const QString metatilesPath = tilesetDir + "/metatiles.bin";
+    const QString metatileAttrsPath = tilesetDir + "/metatile_attributes.bin";
 
     QString dataString = "\n";
     if (usingAsm) {
@@ -421,7 +420,7 @@ bool Tileset::appendToMetatiles(const QString &filepath, const QString &friendly
         dataString.append(QString("gMetatileAttributes_%1::\n").arg(friendlyName));
         dataString.append(QString("\t.incbin \"%1\"\n").arg(metatileAttrsPath));
     } else {
-        // Append to C file
+        // Append to C file, if json metatiles are used replace the file extension so we still point to the compiled binary
         dataString.append(QString("const u16 gMetatiles_%1[] = INCBIN_U16(\"%2\");\n").arg(friendlyName, metatilesPath));
         QString numBits = QString::number(projectConfig.metatileAttributesSize * 8);
         dataString.append(QString("const u%1 gMetatileAttributes_%2[] = INCBIN_U%1(\"%3\");\n").arg(numBits, friendlyName, metatileAttrsPath));
