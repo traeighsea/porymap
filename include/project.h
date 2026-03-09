@@ -61,6 +61,10 @@ public:
     ParseUtil parser;
     QSet<QString> modifiedFiles;
     bool usingAsmTilesets;
+    /// Used when creating new layouts. Once set, doesn't unset
+    bool useJsonForBlockdata{false};
+    /// Used when creating new tilesets. Once set, doesn't unset
+    bool useJsonForMetatiles{false};
     QSet<QString> disabledSettingsNames;
     int pokemonMinLevel;
     int pokemonMaxLevel;

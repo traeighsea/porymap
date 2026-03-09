@@ -105,7 +105,14 @@ uint32_t Metatile::getAttribute(QString attribute) const {
 }
 
 const QList<QString> Metatile::getAttributeKeys() const {
-   return attributes.keys();
+    if (!attributes.empty()) {
+        return attributes.keys();
+    }
+    QList<QString> packer;
+    for (auto key : attributePackers.keys()) {
+        packer.append(AttrEnumToStr(key));
+    }
+    return packer;
 }
 
 // Unpack and insert metatile attributes from the given data.

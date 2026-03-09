@@ -495,9 +495,9 @@ bool Tileset::loadMetatileAttributes() {
 
 bool Tileset::saveMetatileAttributes() {
     if (Util::hasExtension(this->metatile_attrs_path, "json")) {
-        return serializeMetatileAttributesToBin();
-    } else {
         return serializeMetatileAttributesToJson();
+    } else {
+        return serializeMetatileAttributesToBin();
     }
 }
 

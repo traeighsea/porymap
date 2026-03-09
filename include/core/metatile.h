@@ -100,6 +100,7 @@ public:
         return !(operator==(other));
     }
 
+    /// Gets either our custom bitpacker or the default attributes mask
     const QList<QString> getAttributeKeys() const;
 
     bool hasCustomBitPacker() { return customBitPacker != nullptr; }

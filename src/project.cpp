@@ -574,9 +574,9 @@ Layout *Project::createNewLayout(const Layout::Settings &settings, const Layout 
     const QString folderName = !settings.folderName.isEmpty() ? settings.folderName : layout->name;
     const QString folderPath = projectConfig.getFilePath(ProjectFilePath::data_layouts_folders) + folderName;
     layout->newFolderPath = folderPath;
-    // TODO(@traeighsea): update to decern bin vs json
-    layout->border_path = folderPath + "/border.json";
-    layout->blockdata_path = folderPath + "/map.json";
+    auto fileExtension = (useJsonForBlockdata) ? ".json" : ".bin";
+    layout->border_path = folderPath + "/border" + fileExtension;
+    layout->blockdata_path = folderPath + "/map" + fileExtension;
 
     if (layout->blockdata.isEmpty()) {
         // Fill layout using default fill settings
@@ -699,6 +699,14 @@ bool Project::readMapLayouts() {
 
     this->customLayoutsData = layoutsObj;
 
+    // Check the blockdata_filepath to see if we have at least one valid json file,
+    // if we do find a valid json path, we should default to json for blockdata for new files
+    useJsonForBlockdata = std::any_of(mapLayouts.begin(), mapLayouts.end(), [this](auto layout) {
+        return std::filesystem::exists(std::filesystem::path(
+            root.toStdString() + "/" + Util::replaceFileExtension(layout->blockdata_path, "json").toStdString()
+        ));
+    });
+
     return true;
 }
 
@@ -727,8 +735,9 @@ bool Project::saveMapLayouts() {
         }
         layoutObj["primary_tileset"] = layout->tileset_primary_label;
         layoutObj["secondary_tileset"] = layout->tileset_secondary_label;
-        layoutObj["border_filepath"] = layout->border_path;
-        layoutObj["blockdata_filepath"] = layout->blockdata_path;
+        // Even if we're using json, we want to serialize the actual binary path here
+        layoutObj["border_filepath"] = Util::replaceFileExtension(layout->border_path, "bin");
+        layoutObj["blockdata_filepath"] = Util::replaceFileExtension(layout->blockdata_path, "bin");
         OrderedJson::append(&layoutObj, layout->customData);
         layoutsArr.push_back(layoutObj);
     }
@@ -1541,6 +1550,7 @@ void Project::readTilesetPaths(Tileset* tileset) {
 
             if (std::filesystem::exists(std::filesystem::path((rootDir + tryJsonPath).toStdString()))) {
                 tileset->metatiles_path = rootDir + tryJsonPath;
+                useJsonForMetatiles = true;
             } else {
                 tileset->metatiles_path = rootDir + metatilesPath;
             }
@@ -1552,6 +1562,7 @@ void Project::readTilesetPaths(Tileset* tileset) {
 
             if (std::filesystem::exists(std::filesystem::path((rootDir + tryJsonPath).toStdString()))) {
                 tileset->metatile_attrs_path = rootDir + tryJsonPath;
+                useJsonForMetatiles = true;
             } else {
                 tileset->metatile_attrs_path = rootDir + metatileAttrsPath;
             }
@@ -1601,9 +1612,9 @@ Tileset *Project::createNewTileset(QString name, bool secondary, bool checkerboa
     }
 
     tileset->tilesImagePath = fullDirectoryPath + "/tiles.png";
-    // TODO(@traeighsea): update to determine which extension to use
-    tileset->metatiles_path = fullDirectoryPath + "/metatiles.json";
-    tileset->metatile_attrs_path = fullDirectoryPath + "/metatile_attributes.json";
+    auto fileExtension = (useJsonForMetatiles) ? ".json" : ".bin";
+    tileset->metatiles_path = fullDirectoryPath + "/metatiles" + fileExtension;
+    tileset->metatile_attrs_path = fullDirectoryPath + "/metatile_attributes" + fileExtension;
 
     // Set default tiles image
     QImage tilesImage(":/images/blank_tileset.png");
