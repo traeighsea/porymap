@@ -56,11 +56,3 @@ void Tile::flip(QImage *image) const {
 #endif
 
 }
-
-int Tile::getIndexInTileset(int tileId) {
-    if (tileId < Project::getNumTilesPrimary()) {
-        return tileId;
-    } else {
-        return tileId - Project::getNumTilesPrimary();
-    }
-}

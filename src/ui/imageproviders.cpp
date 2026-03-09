@@ -142,8 +142,7 @@ QImage getMetatileImage(
 }
 
 QImage getTileImage(uint16_t tileId, const Tileset *primaryTileset, const Tileset *secondaryTileset) {
-    const Tileset *tileset = Tileset::getTileTileset(tileId, primaryTileset, secondaryTileset);
-    return tileset ? tileset->tileImage(tileId) : QImage();
+    return Tileset::tileImage(tileId, primaryTileset, secondaryTileset);
 }
 
 QImage getColoredTileImage(uint16_t tileId, const Tileset *primaryTileset, const Tileset *secondaryTileset, const QList<QRgb> &palette) {

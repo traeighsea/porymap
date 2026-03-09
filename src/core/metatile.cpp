@@ -52,15 +52,6 @@ Metatile::Attr Metatile::StringToAttrEnum(QString str) {
     return StringToAttrEnum(str.toStdString());
 }
 
-// TODO(@traeighsea): Check where this is used, update to not use this
-int Metatile::getIndexInTileset(int metatileId) {
-    if (metatileId < Project::getNumMetatilesPrimary()) {
-        return metatileId;
-    } else {
-        return metatileId - Project::getNumMetatilesPrimary();
-    }
-}
-
 QPoint Metatile::coordFromPixmapCoord(const QPointF &pixelCoord) {
     int x = static_cast<int>(pixelCoord.x()) / pixelWidth();
     int y = static_cast<int>(pixelCoord.y()) / pixelHeight();

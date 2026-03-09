@@ -58,6 +58,7 @@ public:
     static QHash<int, QString> getHeaderMemberMap(bool usingAsm);
     static QString getExpectedDir(QString tilesetName, bool isSecondary);
     QString getExpectedDir();
+    static QImage tileImage(int, const Tileset *, const Tileset *);
 
     bool load();
     bool loadMetatiles();
@@ -88,11 +89,8 @@ public:
     int numMetatiles() const;
     int maxMetatiles() const;
 
-    // TODO(@traeighsea): oh this is gonna get complicated but this technically shouldn't work in the future
     uint16_t firstMetatileId() const;
-    // TODO(@traeighsea): oh this is gonna get complicated but this technically shouldn't work in the future
     uint16_t lastMetatileId() const;
-    // TODO(@traeighsea): oh this is gonna get complicated but this technically shouldn't work in the future
     bool containsMetatileId(uint16_t metatileId) const { return metatileId >= firstMetatileId() && metatileId <= lastMetatileId(); }
 
     uint16_t firstTileId() const;
@@ -101,8 +99,6 @@ public:
 
     int numTiles() const;
     int maxTiles() const;
-
-    QImage tileImage(uint16_t tileId) const { return m_tiles.value(Tile::getIndexInTileset(tileId)); }
 
     QSet<int> getUnusedColorIds(int paletteId, const Tileset *pairedTileset, const QSet<int> &searchColors = {}) const;
     QList<uint16_t> findMetatilesUsingColor(int paletteId, int colorId, const Tileset *pairedTileset) const;

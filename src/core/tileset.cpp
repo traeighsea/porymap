@@ -104,7 +104,7 @@ void Tileset::resizeMetatiles(int newNumMetatiles) {
     }
 }
 uint16_t Tileset::firstMetatileId() const {
-    return this->is_secondary ? Project::getNumMetatilesPrimary() : 0;
+    return this->is_secondary ? maxMetatiles() : 0;
 }
 
 uint16_t Tileset::lastMetatileId() const {
@@ -120,7 +120,7 @@ int Tileset::maxMetatiles() const {
 }
 
 uint16_t Tileset::firstTileId() const {
-    return this->is_secondary ? Project::getNumTilesPrimary() : 0;
+    return this->is_secondary ? maxTiles() : 0;
 }
 
 uint16_t Tileset::lastTileId() const {
@@ -170,9 +170,9 @@ Tileset* Tileset::getMetatileTileset(int metatileId, Tileset *primaryTileset, Ti
 
 // Get the tileset *expected* to contain the given 'metatileId'. Note that this does not mean the metatile actually exists in that tileset.
 const Tileset* Tileset::getMetatileTileset(int metatileId, const Tileset *primaryTileset, const Tileset *secondaryTileset) {
-    if (metatileId < Project::getNumMetatilesPrimary()) {
+    if (metatileId < primaryTileset->maxMetatiles()) {
         return primaryTileset;
-    } else if (metatileId < Project::getNumMetatilesTotal()) {
+    } else if (metatileId < primaryTileset->maxMetatiles() + secondaryTileset->maxMetatiles()) {
         return secondaryTileset;
     } else {
         return nullptr;
@@ -188,7 +188,8 @@ const Metatile* Tileset::getMetatile(int metatileId, const Tileset *primaryTiles
     if (!tileset) {
         return nullptr;
     }
-    int index = Metatile::getIndexInTileset(metatileId);
+
+    int index = metatileId < primaryTileset->maxMetatiles() ? metatileId : metatileId - primaryTileset->maxMetatiles();
     return tileset->m_metatiles.value(index, nullptr);
 }
 
@@ -198,10 +199,10 @@ const Metatile* Tileset::getMetatile(int metatileId, const Tileset *primaryTiles
 Tileset* Tileset::getMetatileLabelTileset(int metatileId, Tileset *primaryTileset, Tileset *secondaryTileset) {
     Tileset *mainTileset = nullptr;
     Tileset *alternateTileset = nullptr;
-    if (metatileId < Project::getNumMetatilesPrimary()) {
+    if (metatileId < primaryTileset->maxMetatiles()) {
         mainTileset = primaryTileset;
         alternateTileset = secondaryTileset;
-    } else if (metatileId < Project::getNumMetatilesTotal()) {
+    } else if (metatileId < primaryTileset->maxMetatiles() + secondaryTileset->maxMetatiles()) {
         mainTileset = secondaryTileset;
         alternateTileset = primaryTileset;
     }
@@ -222,10 +223,10 @@ MetatileLabelPair Tileset::getMetatileLabelPair(int metatileId, Tileset *primary
     QString primaryMetatileLabel = primaryTileset ? primaryTileset->metatileLabels.value(metatileId) : "";
     QString secondaryMetatileLabel = secondaryTileset ? secondaryTileset->metatileLabels.value(metatileId) : "";
 
-    if (metatileId < Project::getNumMetatilesPrimary()) {
+    if (metatileId < primaryTileset->maxMetatiles()) {
         labels.owned = primaryMetatileLabel;
         labels.shared = secondaryMetatileLabel;
-    } else if (metatileId < Project::getNumMetatilesTotal()) {
+    } else if (metatileId < primaryTileset->maxMetatiles() + secondaryTileset->maxMetatiles()) {
         labels.owned = secondaryMetatileLabel;
         labels.shared = primaryMetatileLabel;
     }
@@ -445,6 +446,17 @@ QString Tileset::getExpectedDir(QString tilesetName, bool isSecondary)
 
     static const QRegularExpression re("([a-z])([A-Z0-9])");
     return basePath + Tileset::stripPrefix(tilesetName).replace(re, "\\1_\\2").toLower();
+}
+
+QImage Tileset::tileImage(int tileId, const Tileset * primaryTileset, const Tileset * secondaryTileset) {
+    const Tileset *tileset = Tileset::getTileTileset(tileId, primaryTileset, secondaryTileset);
+    if (!tileset) {
+        logError(QString("Couldn't get tile image"));
+        return QImage{};
+    }
+
+    int index = tileId < primaryTileset->maxTiles() ? tileId : tileId - primaryTileset->maxTiles();
+    return tileset->m_tiles.value(index);
 }
 
 // Get the expected positions of the members in struct Tileset.
