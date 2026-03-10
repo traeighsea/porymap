@@ -265,6 +265,7 @@ void Prefab::addPrefab(MetatileSelection selection, Layout *layout, QString name
     for (auto metatile : selection.metatileItems) {
         if (!metatile.enabled)
             continue;
+        //! TODO(@traeighsea): ayo we should check what the number of max primary metatiles is from the actual tileset
         if (metatile.metatileId < Project::getNumMetatilesPrimary()) {
             usesPrimaryTileset = true;
         } else if (metatile.metatileId < Project::getNumMetatilesTotal()) {

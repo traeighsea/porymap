@@ -67,7 +67,8 @@ void TilesetEditorTileSelector::draw() {
 
     if (this->showDivider) {
         QPainter painter(&pixmap);
-        int row = Util::roundUpToMultiple(Project::getNumTilesPrimary(), this->numTilesWide) / this->numTilesWide;
+        int maxNumPrimaryTiles = primaryTileset ? primaryTileset->maxTiles() : Project::getNumTilesPrimary();
+        int row = Util::roundUpToMultiple(maxNumPrimaryTiles, this->numTilesWide) / this->numTilesWide;
         const int y = row * this->cellHeight;
         painter.setPen(Qt::white);
         painter.drawLine(0, y, this->numTilesWide * this->cellWidth, y);
@@ -251,7 +252,8 @@ QImage TilesetEditorTileSelector::buildSecondaryTilesIndexedImage() {
     if (!this->secondaryTileset)
         return QImage();
 
-    return buildImage(Project::getNumTilesPrimary(), this->secondaryTileset->numTiles());
+    int maxNumPrimaryTiles = primaryTileset ? primaryTileset->maxTiles() : Project::getNumTilesPrimary();
+    return buildImage(maxNumPrimaryTiles, this->secondaryTileset->numTiles());
 }
 
 QImage TilesetEditorTileSelector::buildImage(int tileIdStart, int numTiles) {

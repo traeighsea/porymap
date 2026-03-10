@@ -883,8 +883,8 @@ void TilesetEditor::on_actionChange_Metatiles_Count_triggered()
     QSpinBox *secondarySpinBox = new QSpinBox();
     primarySpinBox->setMinimum(1);
     secondarySpinBox->setMinimum(1);
-    primarySpinBox->setMaximum(Project::getNumMetatilesPrimary());
-    secondarySpinBox->setMaximum(Project::getNumMetatilesSecondary());
+    primarySpinBox->setMaximum(this->primaryTileset->maxMetatiles());
+    secondarySpinBox->setMaximum(this->secondaryTileset->maxMetatiles());
     primarySpinBox->setValue(this->primaryTileset->numMetatiles());
     secondarySpinBox->setValue(this->secondaryTileset->numMetatiles());
     form.addRow(new QLabel("Primary Tileset"), primarySpinBox);
@@ -1212,7 +1212,7 @@ void TilesetEditor::countMetatileUsage() {
             // for each block in the layout, mark in the vector that it is used
             for (int i = 0; i < layout->blockdata.length(); i++) {
                 uint16_t metatileId = layout->blockdata.at(i).metatileId();
-                if (metatileId < this->project->getNumMetatilesPrimary()) {
+                if (metatileId < primaryTileset->maxMetatiles()) {
                     if (usesPrimary) metatileSelector->usedMetatiles[metatileId]++;
                 } else {
                     if (usesSecondary) metatileSelector->usedMetatiles[metatileId]++;
@@ -1221,7 +1221,7 @@ void TilesetEditor::countMetatileUsage() {
 
             for (int i = 0; i < layout->border.length(); i++) {
                 uint16_t metatileId = layout->border.at(i).metatileId();
-                if (metatileId < this->project->getNumMetatilesPrimary()) {
+                if (metatileId < primaryTileset->maxMetatiles()) {
                     if (usesPrimary) metatileSelector->usedMetatiles[metatileId]++;
                 } else {
                     if (usesSecondary) metatileSelector->usedMetatiles[metatileId]++;

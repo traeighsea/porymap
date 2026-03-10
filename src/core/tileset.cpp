@@ -104,7 +104,15 @@ void Tileset::resizeMetatiles(int newNumMetatiles) {
     }
 }
 uint16_t Tileset::firstMetatileId() const {
-    return this->is_secondary ? maxMetatiles() : 0;
+    // TODO(@traeighsea): to be discussed with the wider group
+    // The assumption here is the secondary tiles plus the primary tiles should equal the total tiles, this may not be
+    // entirely true
+    //
+    // My take on this is that we shouldn't have this function at all as this concept exists outside the single tileset
+    // itself and assumes knowledge of something it doesn't have.
+    // It would do better designed as a free function, similarly same with the current list of static functions.
+    // To accurately know this info we would need to know about the primary tileset if we're the secondary one
+    return this->is_secondary ?  Project::getNumMetatilesTotal() - maxMetatiles() : 0;
 }
 
 uint16_t Tileset::lastMetatileId() const {
@@ -132,7 +140,7 @@ int Tileset::numTiles() const {
 }
 
 int Tileset::maxTiles() const {
-    return m_numTiles.value_or(is_secondary ? Project::getNumTilesTotal() - Project::getNumTilesPrimary() : Project::getNumTilesPrimary());
+    return m_numTiles.value_or(is_secondary ? Project::getNumTilesSecondary() : Project::getNumTilesPrimary());
 }
 
 Tileset* Tileset::getPaletteTileset(int paletteId, Tileset *primaryTileset, Tileset *secondaryTileset) {
@@ -155,7 +163,7 @@ Tileset* Tileset::getTileTileset(int tileId, Tileset *primaryTileset, Tileset *s
 
 // Get the tileset *expected* to contain the given 'tileId'. Note that this does not mean the tile actually exists in that tileset.
 const Tileset* Tileset::getTileTileset(int tileId, const Tileset *primaryTileset, const Tileset *secondaryTileset) {
-    if (tileId < Project::getNumTilesPrimary()) {
+    if (tileId < primaryTileset->maxTiles()) {
         return primaryTileset;
     } else if (tileId < Project::getNumTilesTotal()) {
         return secondaryTileset;
@@ -811,7 +819,7 @@ bool Tileset::deserializeMetatilesFromJson() {
     if (succeeded) {
         m_numMetatiles = numMetatiles;
     } else {
-        int numMetatilesDefault = is_secondary ? Project::getNumMetatilesTotal() - Project::getNumMetatilesPrimary() : Project::getNumMetatilesPrimary();
+        int numMetatilesDefault = is_secondary ? Project::getNumMetatilesSecondary() : Project::getNumMetatilesPrimary();
         if (numMetatiles != numMetatilesDefault){
             logWarn(QString("Num metatiles %1 different than expected in %2").arg(numMetatiles).arg(metatiles_path));
         }
@@ -822,7 +830,7 @@ bool Tileset::deserializeMetatilesFromJson() {
     if (succeeded) {
         m_numTiles = numTiles;
     } else {
-        int numTilesDefault = is_secondary ? Project::getNumTilesTotal() - Project::getNumTilesPrimary() : Project::getNumTilesPrimary();
+        int numTilesDefault = is_secondary ? Project::getNumTilesSecondary() : Project::getNumTilesPrimary();
         if (numTiles != numTilesDefault){
             logWarn(QString("Num tiles %1 different than expected in %2").arg(numTiles).arg(metatiles_path));
         }

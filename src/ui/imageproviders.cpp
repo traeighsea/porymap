@@ -245,7 +245,7 @@ QImage getMetatileSheetImage(const Tileset *primaryTileset,
     };
 
     QImage primaryImage = createSheetImage(0, primaryTileset);
-    QImage secondaryImage = createSheetImage(Project::getNumMetatilesPrimary(), secondaryTileset);
+    QImage secondaryImage = createSheetImage(primaryTileset->maxMetatiles(), secondaryTileset);
 
     QImage image(qMax(primaryImage.width(), secondaryImage.width()), primaryImage.height() + secondaryImage.height(), QImage::Format_RGBA8888);
     image.fill(getInvalidImageColor());

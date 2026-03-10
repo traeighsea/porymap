@@ -214,7 +214,8 @@ uint16_t MetatileSelector::posToMetatileId(int x, int y, bool *ok) const {
     // These need to be ignored, or they'll appear to be duplicates of the subseqeunt secondary metatiles.
     int numPrimaryRounded = numPrimaryMetatilesRounded();
     int firstSecondaryRow = numPrimaryRounded / this->numMetatilesWide;
-    metatileId = static_cast<uint16_t>(Project::getNumMetatilesPrimary() + index - numPrimaryRounded);
+    int maxNumPrimaryMetatiles = primaryTileset() ? primaryTileset()->maxMetatiles() : Project::getNumMetatilesPrimary();
+    metatileId = static_cast<uint16_t>(maxNumPrimaryMetatiles + index - numPrimaryRounded);
     if (secondaryTileset() && secondaryTileset()->containsMetatileId(metatileId) && y >= firstSecondaryRow) {
         return metatileId;
     }
@@ -231,7 +232,8 @@ QPoint MetatileSelector::metatileIdToPos(uint16_t metatileId, bool *ok) const {
     }
     if (secondaryTileset() && secondaryTileset()->containsMetatileId(metatileId)) {
         if (ok) *ok = true;
-        int index = metatileId - Project::getNumMetatilesPrimary() + numPrimaryMetatilesRounded();
+        int maxNumPrimaryMetatiles = primaryTileset() ? primaryTileset()->maxMetatiles() : Project::getNumMetatilesPrimary();
+        int index = metatileId - maxNumPrimaryMetatiles + numPrimaryMetatilesRounded();
         return QPoint(index % this->numMetatilesWide, index / this->numMetatilesWide);
     }
 

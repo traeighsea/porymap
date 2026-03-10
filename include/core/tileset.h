@@ -22,7 +22,7 @@ public:
 
 public:
     QString name;
-    bool is_secondary;
+    bool is_secondary{false};
     QString tiles_label;
     QString palettes_label;
     QString metatiles_label;

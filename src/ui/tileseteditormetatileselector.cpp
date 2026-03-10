@@ -230,7 +230,7 @@ uint16_t TilesetEditorMetatileSelector::posToMetatileId(int x, int y, bool *ok) 
     // These need to be ignored, or they'll appear to be duplicates of the subseqeunt secondary metatiles.
     int numPrimaryRounded = numPrimaryMetatilesRounded();
     int firstSecondaryRow = numPrimaryRounded / this->numMetatilesWide;
-    metatileId = static_cast<uint16_t>(Project::getNumMetatilesPrimary() + index - numPrimaryRounded);
+    metatileId = static_cast<uint16_t>(this->primaryTileset->maxMetatiles() + index - numPrimaryRounded);
     if (this->secondaryTileset && this->secondaryTileset->containsMetatileId(metatileId) && y >= firstSecondaryRow) {
         return metatileId;
     }
@@ -247,7 +247,7 @@ QPoint TilesetEditorMetatileSelector::metatileIdToPos(uint16_t metatileId, bool 
     }
     if (this->secondaryTileset && this->secondaryTileset->containsMetatileId(metatileId)) {
         if (ok) *ok = true;
-        int index = metatileId - Project::getNumMetatilesPrimary() + numPrimaryMetatilesRounded();
+        int index = metatileId - primaryTileset->maxMetatiles() + numPrimaryMetatilesRounded();
         return QPoint(index % this->numMetatilesWide, index / this->numMetatilesWide);
     }
 
